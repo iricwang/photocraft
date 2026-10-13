@@ -3807,3 +3807,70 @@ curves	Smooth	Vloeiend maken
 	Light Red	Lichtrood
 	Medium Blue	Middelblauw
 	Light Gray	Lichtgrijs
+# Native AI candidate review
+	AI Studio	AI-studio
+	Close AI Studio	AI-studio sluiten
+	Local Test Provider	Lokale testgenerator
+	Prompt	Opdracht
+	Create Test Candidate	Testvoorstel maken
+	Candidate	Voorstel
+	Document changed	Document gewijzigd
+	Candidate ready	Voorstel gereed
+	Candidate applied	Voorstel toegepast
+	Candidate discarded	Voorstel verworpen
+# Native AI candidate action
+	Discard	Verwerpen
+# Native image generation
+	Provider	Aanbieder
+	Connection settings	Verbindingsinstellingen
+	Base URL	Basis-URL
+	API key (session only)	API-sleutel (alleen deze sessie)
+	Codex executable (optional)	Codex-programma (optioneel)
+	Codex model (automatic if empty)	Codex-model (leeg = automatisch)
+	Use current layer as reference	Huidige laag als referentie gebruiken
+	Generate image	Afbeelding genereren
+	Generating image...	Afbeelding genereren...
+	Generation cancelled	Genereren geannuleerd
+	Refresh models	Modellen vernieuwen
+	Optimizing prompt...	Prompt optimaliseren...
+	Optimized prompt	Geoptimaliseerde prompt
+	Generation history	Generatiegeschiedenis
+	Generate again	Opnieuw genereren
+	New generation	Nieuwe generatie
+	Remove generation record	Generatierecord verwijderen
+	Generation mode	Generatiemodus
+	In-place edit	Lokale bewerking
+	Transparent component	Transparant onderdeel
+	Generation settings	Generatie-instellingen
+	Describe your edit	Beschrijf de wijziging
+	Component set (1 image)	Componentenset (1 afbeelding)
+	Player preset	Spelervoorinstelling
+	Buttons	Knoppen
+	Tracks	Schuifregelaars
+	Generating asset set...	Elementenset genereren...
+	Arranging asset layers...	Elementlagen plaatsen...
+	Reference images	Referentieafbeeldingen
+	Choose reference image	Referentieafbeelding kiezen
+	Paste reference image	Referentieafbeelding plakken
+	Remove reference image	Referentieafbeelding verwijderen
+	No image on the clipboard	Geen afbeelding op het klembord
+	Clipboard image	Klembordafbeelding
+	Preparing reference image...	Referentieafbeelding voorbereiden...
+	Linking Codex project...	Codex-project koppelen...
+	Wait for the current operation to finish	Wacht tot de huidige bewerking is voltooid
+	Up to 4 reference images	Maximaal 4 referentieafbeeldingen
+	Reference image exceeds 32 MB	Referentieafbeelding is groter dan 32 MB
+	Reasoning effort	Redeneerniveau
+	Minimal	Minimaal
+	Extra high	Zeer hoog
+	Ultra	Ultra
+	Model settings	Modelinstellingen
+	Hide model settings	Modelinstellingen verbergen
+	Show/Hide Model Settings	Modelinstellingen tonen/verbergen
+	Collapse AI Studio	AI-studio inklappen
+	Show AI Studio	AI-studio tonen
+	Enable AI	AI inschakelen
+	Enable AI to generate images	Schakel AI in om afbeeldingen te genereren
+	AI disabled	AI uitgeschakeld
+	Generation details	Generatiedetails
+	Generating	Bezig met genereren

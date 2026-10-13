@@ -534,6 +534,13 @@ impl PcraftWriter {
     fn prepare(&mut self, doc: &Document, opts: &SaveOptions) -> Result<Prepared> {
         self.hash_cache.retain(|_, (w, _)| w.strong_count() > 0);
         convert::check_nesting(&doc.layers)?;
+        if !doc.ai_project.is_valid() {
+            return Err(FormatError::corrupt("invalid AI project memory"));
+        }
+        let mut ai_ids = std::collections::HashSet::new();
+        if doc.ai_generations.len() > photocraft_doc::ai::MAX_GROUPS || doc.ai_generations.iter().any(|g| !g.is_valid() || !ai_ids.insert(g.id)) {
+            return Err(FormatError::corrupt("invalid AI generation records"));
+        }
         let mut c = Collect { hash_cache: Some(&mut self.hash_cache), ..Default::default() };
         let document = convert::doc_m(doc, &mut c);
         let mut previews = Vec::new();

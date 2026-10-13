@@ -48,6 +48,10 @@ pub struct DocM {
     pub guides: Guides,
     pub selection: Option<SurfaceM>,
     pub metadata: MetadataM,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub ai_generations: Vec<GenerationGroupM>,
+    #[serde(default)]
+    pub ai_project: ProjectMemoryM,
     pub global_light: GlobalLight,
     /// Saved paths (Paths panel).
     #[serde(default)]
@@ -96,6 +100,21 @@ pub struct DocM {
     /// Web slices (user and layer-based; layer ids are remapped on load).
     #[serde(default, skip_serializing_if = "photocraft_doc::Slices::is_empty")]
     pub slices: photocraft_doc::Slices,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GenerationGroupM {
+    pub id: u64,
+    pub canvas: Size,
+    pub area: photocraft_geom::Rect,
+    pub frame: Option<photocraft_geom::Rect>,
+    pub selection: Option<SurfaceM>,
+    pub reference_png: Option<Hash>,
+    #[serde(default)]
+    pub mode: photocraft_doc::ai::GenerationMode,
+    #[serde(default)]
+    pub context_png: Option<Hash>,
+    pub versions: Vec<photocraft_doc::ai::GenerationVersion>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -350,6 +369,22 @@ fn default_channel_opacity() -> f32 {
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct ProjectMemoryM {
+    pub id: String,
+    pub references: Vec<ProjectReferenceM>,
+    pub events: Vec<photocraft_doc::ai::ProjectEvent>,
+    pub next_sequence: u64,
+    pub last_prompt: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ProjectReferenceM {
+    pub id: u64,
+    pub name: String,
+    pub png: Hash,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct MetadataM {
     pub xmp: Option<String>,
     pub exif: Option<Hash>,
@@ -364,6 +399,27 @@ pub struct MetadataM {
 #[cfg(test)]
 mod channel_tests {
     use super::*;
+
+    #[test]
+    fn older_ai_records_default_to_repaint_without_context() {
+        let record = GenerationGroupM {
+            id: 1,
+            canvas: photocraft_geom::Size::new(80, 60),
+            area: photocraft_geom::Rect::new(0, 40, 80, 60),
+            frame: None,
+            selection: None,
+            reference_png: None,
+            mode: Default::default(),
+            context_png: None,
+            versions: Vec::new(),
+        };
+        let mut json = serde_json::to_value(record).unwrap();
+        json.as_object_mut().unwrap().remove("mode");
+        json.as_object_mut().unwrap().remove("context_png");
+        let loaded: GenerationGroupM = serde_json::from_value(json).unwrap();
+        assert_eq!(loaded.mode, photocraft_doc::ai::GenerationMode::Repaint);
+        assert!(loaded.context_png.is_none());
+    }
 
     #[test]
     fn older_channels_load_with_default_options() {

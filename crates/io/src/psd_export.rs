@@ -1546,6 +1546,9 @@ fn document_to_psd_nested(doc: &Document, opts: &PsdExportOptions, depth: u32, c
         ex.warnings.push(warning);
     }
     for (id, name, data) in &doc.metadata.psd_resources {
+        if crate::ai_project_map::matches(*id, data) && doc.ai_project != photocraft_doc::ai::ProjectMemory::default() {
+            continue;
+        }
         // Layer comps: the preserved list while unchanged, else regenerated (or dropped) below.
         if *id == crate::comps_map::LAYER_COMPS && comps_resource.is_some() {
             continue;
@@ -1579,6 +1582,7 @@ fn document_to_psd_nested(doc: &Document, opts: &PsdExportOptions, depth: u32, c
     if let Some(Some(data)) = slices_resource {
         resources.push(ImageResource::new(crate::slices_map::SLICES, data));
     }
+    crate::ai_project_map::append(doc, &mut resources, &mut ex.warnings);
     resources.push(version_info_resource(true));
 
     let has_layers = !ex.records.is_empty();

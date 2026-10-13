@@ -3661,3 +3661,70 @@ navigator	Zoom	Zvětšení
 	Light Blue	Světle modrá
 	Light Red	Světle červená
 	Medium Blue	Středně modrá
+# Native AI candidate review
+	AI Studio	AI studio
+	Close AI Studio	Zavřít AI studio
+	Local Test Provider	Místní testovací generátor
+	Prompt	Zadání
+	Create Test Candidate	Vytvořit testovací návrh
+	Candidate	Návrh
+	Document changed	Dokument byl změněn
+	Candidate ready	Návrh je připraven
+	Candidate applied	Návrh byl použit
+	Candidate discarded	Návrh byl zahozen
+# Native AI candidate action
+	Discard	Zahodit
+# Native image generation
+	Provider	Poskytovatel
+	Connection settings	Nastavení připojení
+	Base URL	Základní URL
+	API key (session only)	Klíč API (jen tato relace)
+	Codex executable (optional)	Program Codex (volitelné)
+	Codex model (automatic if empty)	Model Codex (prázdné = automaticky)
+	Use current layer as reference	Použít aktuální vrstvu jako předlohu
+	Generate image	Vygenerovat obrázek
+	Generating image...	Generování obrázku...
+	Generation cancelled	Generování zrušeno
+	Refresh models	Obnovit modely
+	Optimizing prompt...	Optimalizace zadání...
+	Optimized prompt	Optimalizované zadání
+	Generation history	Historie generování
+	Generate again	Generovat znovu
+	New generation	Nové generování
+	Remove generation record	Odstranit záznam generování
+	Generation mode	Režim generování
+	In-place edit	Úprava na místě
+	Transparent component	Průhledný prvek
+	Generation settings	Nastavení generování
+	Describe your edit	Popište úpravu
+	Component set (1 image)	Sada prvků (1 obrázek)
+	Player preset	Předvolba přehrávače
+	Buttons	Tlačítka
+	Tracks	Posuvníky
+	Generating asset set...	Generování sady prvků...
+	Arranging asset layers...	Rozmisťování vrstev...
+	Reference images	Referenční obrázky
+	Choose reference image	Vybrat referenční obrázek
+	Paste reference image	Vložit referenční obrázek
+	Remove reference image	Odebrat referenční obrázek
+	No image on the clipboard	Ve schránce není obrázek
+	Clipboard image	Obrázek ze schránky
+	Preparing reference image...	Příprava referenčního obrázku...
+	Linking Codex project...	Propojování projektu Codex...
+	Wait for the current operation to finish	Počkejte na dokončení aktuální operace
+	Up to 4 reference images	Nejvýše 4 referenční obrázky
+	Reference image exceeds 32 MB	Referenční obrázek přesahuje 32 MB
+	Reasoning effort	Úroveň uvažování
+	Minimal	Minimální
+	Extra high	Velmi vysoká
+	Ultra	Ultra
+	Model settings	Nastavení modelu
+	Hide model settings	Skrýt nastavení modelu
+	Show/Hide Model Settings	Zobrazit/skrýt nastavení modelu
+	Collapse AI Studio	Sbalit AI studio
+	Show AI Studio	Zobrazit AI studio
+	Enable AI	Povolit AI
+	Enable AI to generate images	Pro generování obrázků zapněte AI
+	AI disabled	AI vypnuta
+	Generation details	Podrobnosti generování
+	Generating	Generování

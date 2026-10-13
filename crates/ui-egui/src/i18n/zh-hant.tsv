@@ -2637,3 +2637,81 @@ curves	Smooth	平滑
 	Light Red	淺紅色
 	Medium Blue	中藍色
 	Light Gray	淺灰色
+# Native AI candidate review
+	AI Studio	AI 工作室
+	Close AI Studio	關閉 AI 工作室
+	Local Test Provider	本機測試產生器
+	Prompt	提示詞
+	Create Test Candidate	產生測試候選
+	Candidate	候選
+	Document changed	文件已變更
+	Candidate ready	候選已就緒
+	Candidate applied	候選已套用
+	Candidate discarded	候選已捨棄
+# Native AI candidate action
+	Discard	捨棄
+# Native image generation
+	Provider	服務商
+	Connection settings	連線設定
+	Base URL	介面位址
+	API key (session only)	API 金鑰（僅本次執行）
+	Codex executable (optional)	Codex 程式路徑（選填）
+	Use current layer as reference	以目前圖層為參考
+	Generate image	產生圖片
+	Generating image...	正在產生圖片...
+	Generation cancelled	產生已取消
+	Codex model (automatic if empty)	Codex 模型（留空自動選擇）
+	Refresh models	重新整理模型
+	Optimizing prompt...	正在最佳化提示詞...
+	Optimized prompt	最佳化後的提示詞
+	Hidden	隱藏
+	Generation history	生成記錄
+	Generate again	再生成一個版本
+	New generation	新生成
+	Remove generation record	移除生成記錄
+	Generation mode	生成模式
+	In-place edit	原位重繪
+	Transparent component	透明元件
+	Generation settings	生成設定
+	Allow component outside selection	允許元件超出選取範圍
+	Describe your edit	在此處輸入修改描述
+	Design first, then extract (2 images)	先設計整圖，再提取元件（2 次生圖）
+	Open intermediate design	開啟中間設計圖
+	Open transparent asset	開啟透明元件原圖
+	Designing in context...	正在結合整圖重新設計...
+	Generating transparent component...	正在生成透明元件...
+	Component set (1 image)	元件集（1 次生圖）
+	Player preset	播放器預設
+	Buttons	按鈕
+	Tracks	進度條
+	Generating asset set...	正在產生整套素材...
+	Arranging asset layers...	正在識別並排布素材圖層...
+	Reference images	參考圖片
+	Choose reference image	選擇參考圖片
+	Paste reference image	貼上參考圖片
+	Remove reference image	移除參考圖片
+	No image on the clipboard	剪貼簿中沒有圖片
+	Clipboard image	剪貼簿圖片
+	Preparing reference image...	正在準備參考圖片...
+	Linking Codex project...	正在關聯 Codex 專案...
+	Wait for the current operation to finish	請等待目前操作完成
+	Up to 4 reference images	最多新增 4 張參考圖片
+	Reference image exceeds 32 MB	參考圖片超過 32 MB
+	Reasoning effort	思考等級
+	Minimal	最低
+	Low	低
+	High	高
+	Extra high	極高
+	Ultra	極致
+	Model settings	模型設定
+	Hide model settings	收合模型設定
+	Show/Hide Model Settings	顯示／隱藏模型設定
+	Collapse AI Studio	收合 AI 浮動面板
+	Show AI Studio	展開 AI 浮動面板
+	Enable AI	啟用 AI
+	Enable AI to generate images	請啟用 AI 後再產生圖片
+	AI disabled	AI 已關閉
+	Generation details	生成詳情
+	Generating	生成中
+	Ready	就緒
+	New document	新增文件

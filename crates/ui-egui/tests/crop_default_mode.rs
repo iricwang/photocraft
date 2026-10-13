@@ -24,6 +24,10 @@ fn harness() -> Option<Harness> {
         egui_kittest::Harness::builder().with_size(egui::vec2(900.0, 640.0)).with_max_steps(64).wgpu().build_eframe(|cc| {
             PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
             let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+            // These crop pixel and gesture checks need an unobstructed canvas;
+            // the generation composer must not intercept drags or cover samples.
+            app.ui.ai.visible = false;
+            app.ui.ai.enabled = false;
             if let Some(rs) = cc.wgpu_render_state.as_ref() {
                 app.set_wgpu(rs.clone());
             }
@@ -206,7 +210,8 @@ fn a_resize_keeps_the_box_centre_after_a_space_pan() {
     let c = h.state().last_canvas_rect.center();
     h.event(egui::Event::Key { key: Key::Space, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::NONE });
     h.step();
-    drag(&mut h, c + vec2(0.0, 200.0), c + vec2(80.0, 240.0), 4, |_, _| {});
+    // Pan from the lower-left pasteboard, away from the collapsed AI restore control.
+    drag(&mut h, c + vec2(-160.0, 200.0), c + vec2(-80.0, 240.0), 4, |_, _| {});
     h.event(egui::Event::Key { key: Key::Space, physical_key: None, pressed: false, repeat: false, modifiers: Modifiers::NONE });
     h.run_steps(3);
     let box0 = screen_box(&h);

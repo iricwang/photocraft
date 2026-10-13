@@ -107,6 +107,7 @@ pub(crate) fn document_to_psd(doc: &Document, force_psb: bool) -> (PsdFile, Vec<
     if let Some(x) = &doc.metadata.xmp {
         resources.push(ImageResource::new(ids::XMP, x.as_bytes().to_vec()));
     }
+    crate::ai_project_map::append(doc, &mut resources, &mut warnings);
     resources.push(version_info_resource(true));
     let color_mode_data = photocraft_psd::hdr::color_mode_data_for_depth(header.depth);
     let file = PsdFile {

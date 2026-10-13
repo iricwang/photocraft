@@ -3217,3 +3217,72 @@ curves	Smooth	매끄럽게
 	Light Red	연한 빨강
 	Medium Blue	중간 파랑
 	Light Gray	연한 회색
+# Native AI candidate review
+	AI Studio	AI 스튜디오
+	Close AI Studio	AI 스튜디오 닫기
+	Local Test Provider	로컬 테스트 생성기
+	Prompt	프롬프트
+	Create Test Candidate	테스트 후보 생성
+	Candidate	후보
+	Document changed	문서가 변경됨
+	Candidate ready	후보 준비 완료
+	Candidate applied	후보 적용 완료
+	Candidate discarded	후보 삭제 완료
+# Native AI candidate action
+	Discard	버리기
+# Native image generation
+	Provider	제공업체
+	Connection settings	연결 설정
+	Base URL	기본 URL
+	API key (session only)	API 키 (현재 세션만)
+	Codex executable (optional)	Codex 실행 파일 (선택)
+	Codex model (automatic if empty)	Codex 모델 (비워 두면 자동)
+	Use current layer as reference	현재 레이어를 참조로 사용
+	Generate image	이미지 생성
+	Generating image...	이미지 생성 중...
+	Generation cancelled	생성 취소됨
+	Refresh models	모델 새로고침
+	Optimizing prompt...	프롬프트 최적화 중...
+	Optimized prompt	최적화된 프롬프트
+	Hidden	숨김
+	Generation history	생성 기록
+	Generate again	다시 생성
+	New generation	새로 생성
+	Remove generation record	생성 기록 제거
+	Generation mode	생성 모드
+	In-place edit	부분 수정
+	Transparent component	투명 구성 요소
+	Generation settings	생성 설정
+	Describe your edit	수정 내용을 입력하세요
+	Component set (1 image)	구성 요소 세트 (이미지 1장)
+	Player preset	플레이어 사전 설정
+	Buttons	버튼
+	Tracks	슬라이더
+	Generating asset set...	에셋 세트 생성 중...
+	Arranging asset layers...	에셋 레이어 배치 중...
+	Reference images	참조 이미지
+	Choose reference image	참조 이미지 선택
+	Paste reference image	참조 이미지 붙여넣기
+	Remove reference image	참조 이미지 제거
+	No image on the clipboard	클립보드에 이미지가 없습니다
+	Clipboard image	클립보드 이미지
+	Preparing reference image...	참조 이미지 준비 중...
+	Linking Codex project...	Codex 프로젝트 연결 중...
+	Wait for the current operation to finish	현재 작업이 끝날 때까지 기다려 주세요
+	Up to 4 reference images	참조 이미지는 최대 4개입니다
+	Reference image exceeds 32 MB	참조 이미지가 32 MB를 초과합니다
+	Reasoning effort	추론 수준
+	Minimal	최소
+	Extra high	매우 높음
+	Ultra	최고
+	Model settings	모델 설정
+	Hide model settings	모델 설정 숨기기
+	Show/Hide Model Settings	모델 설정 표시/숨기기
+	Collapse AI Studio	AI 스튜디오 접기
+	Show AI Studio	AI 스튜디오 표시
+	Enable AI	AI 활성화
+	Enable AI to generate images	이미지를 생성하려면 AI를 활성화하세요
+	AI disabled	AI 비활성화됨
+	Generation details	생성 세부 정보
+	Generating	생성 중
+	Ready	준비됨

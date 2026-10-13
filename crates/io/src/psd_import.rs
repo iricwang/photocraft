@@ -569,6 +569,15 @@ pub fn psd_to_document_with(file: &PsdFile, ctl: &photocraft_raster::Interrupt) 
 
     // Resources.
     for r in &file.resources {
+        if crate::ai_project_map::matches(r.id, &r.data) {
+            match crate::ai_project_map::decode(&r.data) {
+                Ok(memory) => {
+                    doc.ai_project = memory;
+                    continue;
+                }
+                Err(error) => warnings.push(format!("AI project memory could not be restored: {error}")),
+            }
+        }
         match r.id {
             ids::RESOLUTION_INFO => {
                 if let Ok(ri) = photocraft_psd::ResolutionInfo::from_bytes(&r.data) {

@@ -2728,3 +2728,75 @@ curves	Smooth	Suavizar
 	Light Red	Rojo claro
 	Medium Blue	Azul medio
 	Light Gray	Gris claro
+# Native AI candidate review
+	AI Studio	Estudio de IA
+	Close AI Studio	Cerrar estudio de IA
+	Local Test Provider	Generador de prueba local
+	Prompt	Instrucción
+	Create Test Candidate	Crear candidato de prueba
+	Candidate	Candidato
+	Document changed	Documento modificado
+	Candidate ready	Candidato listo
+	Candidate applied	Candidato aplicado
+	Candidate discarded	Candidato descartado
+# Native AI candidate action
+	Discard	Descartar
+# Native image generation
+	Provider	Proveedor
+	Connection settings	Configuración de conexión
+	Base URL	URL base
+	API key (session only)	Clave API (solo esta sesión)
+	Codex executable (optional)	Ejecutable Codex (opcional)
+	Codex model (automatic if empty)	Modelo Codex (vacío = automático)
+	Use current layer as reference	Usar capa actual como referencia
+	Generate image	Generar imagen
+	Generating image...	Generando imagen...
+	Generation cancelled	Generación cancelada
+	Refresh models	Actualizar modelos
+	Optimizing prompt...	Optimizando la instrucción...
+	Optimized prompt	Instrucción optimizada
+	Hidden	Oculto
+	Generation history	Historial de generación
+	Generate again	Generar de nuevo
+	New generation	Nueva generación
+	Remove generation record	Eliminar registro de generación
+	Generation mode	Modo de generación
+	In-place edit	Edición local
+	Transparent component	Componente transparente
+	Generation settings	Configuración de generación
+	Describe your edit	Describe el cambio
+	Component set (1 image)	Conjunto de componentes (1 imagen)
+	Player preset	Preajuste de reproductor
+	Buttons	Botones
+	Tracks	Deslizadores
+	Generating asset set...	Generando conjunto de elementos...
+	Arranging asset layers...	Organizando capas de elementos...
+	Reference images	Imágenes de referencia
+	Choose reference image	Elegir imagen de referencia
+	Paste reference image	Pegar imagen de referencia
+	Remove reference image	Quitar imagen de referencia
+	No image on the clipboard	No hay imagen en el portapapeles
+	Clipboard image	Imagen del portapapeles
+	Preparing reference image...	Preparando imagen de referencia...
+	Linking Codex project...	Vinculando proyecto de Codex...
+	Wait for the current operation to finish	Espere a que termine la operación actual
+	Up to 4 reference images	Hasta 4 imágenes de referencia
+	Reference image exceeds 32 MB	La imagen de referencia supera los 32 MB
+	Reasoning effort	Nivel de razonamiento
+	Minimal	Mínimo
+	Low	Bajo
+	High	Alto
+	Extra high	Muy alto
+	Ultra	Ultra
+	Model settings	Configuración del modelo
+	Hide model settings	Ocultar configuración del modelo
+	Show/Hide Model Settings	Mostrar/ocultar configuración del modelo
+	Collapse AI Studio	Contraer Estudio de IA
+	Show AI Studio	Mostrar Estudio de IA
+	Enable AI	Activar IA
+	Enable AI to generate images	Activa la IA para generar imágenes
+	AI disabled	IA desactivada
+	Generation details	Detalles de generación
+	Generating	Generando
+	Ready	Listo
+	New document	Nuevo documento

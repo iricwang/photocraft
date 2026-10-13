@@ -2687,3 +2687,75 @@ curves	Smooth	Glätten
 	Light Red	Hellrot
 	Medium Blue	Mittelblau
 	Light Gray	Hellgrau
+# Native AI candidate review
+	AI Studio	KI-Studio
+	Close AI Studio	KI-Studio schließen
+	Local Test Provider	Lokaler Testgenerator
+	Prompt	Anweisung
+	Create Test Candidate	Testvorschlag erstellen
+	Candidate	Vorschlag
+	Document changed	Dokument geändert
+	Candidate ready	Vorschlag bereit
+	Candidate applied	Vorschlag angewendet
+	Candidate discarded	Vorschlag verworfen
+# Native AI candidate action
+	Discard	Verwerfen
+# Native image generation
+	Provider	Anbieter
+	Connection settings	Verbindungseinstellungen
+	Base URL	Basis-URL
+	API key (session only)	API-Schlüssel (nur diese Sitzung)
+	Codex executable (optional)	Codex-Programm (optional)
+	Codex model (automatic if empty)	Codex-Modell (leer = automatisch)
+	Use current layer as reference	Aktuelle Ebene als Vorlage verwenden
+	Generate image	Bild generieren
+	Generating image...	Bild wird generiert...
+	Generation cancelled	Generierung abgebrochen
+	Refresh models	Modelle aktualisieren
+	Optimizing prompt...	Prompt wird optimiert...
+	Optimized prompt	Optimierter Prompt
+	Hidden	Ausgeblendet
+	Generation history	Generierungsverlauf
+	Generate again	Erneut generieren
+	New generation	Neue Generierung
+	Remove generation record	Generierungseintrag entfernen
+	Generation mode	Generierungsmodus
+	In-place edit	Direkte Bearbeitung
+	Transparent component	Transparentes Element
+	Generation settings	Generierungseinstellungen
+	Describe your edit	Beschreiben Sie die Änderung
+	Component set (1 image)	Komponentensatz (1 Bild)
+	Player preset	Player-Vorlage
+	Buttons	Schaltflächen
+	Tracks	Schieberegler
+	Generating asset set...	Elementsatz wird generiert...
+	Arranging asset layers...	Elementebenen werden angeordnet...
+	Reference images	Referenzbilder
+	Choose reference image	Referenzbild auswählen
+	Paste reference image	Referenzbild einfügen
+	Remove reference image	Referenzbild entfernen
+	No image on the clipboard	Kein Bild in der Zwischenablage
+	Clipboard image	Bild aus Zwischenablage
+	Preparing reference image...	Referenzbild wird vorbereitet...
+	Linking Codex project...	Codex-Projekt wird verknüpft...
+	Wait for the current operation to finish	Warten Sie auf den Abschluss des Vorgangs
+	Up to 4 reference images	Bis zu 4 Referenzbilder
+	Reference image exceeds 32 MB	Referenzbild überschreitet 32 MB
+	Reasoning effort	Denkaufwand
+	Minimal	Minimal
+	Low	Niedrig
+	High	Hoch
+	Extra high	Sehr hoch
+	Ultra	Ultra
+	Model settings	Modelleinstellungen
+	Hide model settings	Modelleinstellungen ausblenden
+	Show/Hide Model Settings	Modelleinstellungen ein-/ausblenden
+	Collapse AI Studio	KI-Studio einklappen
+	Show AI Studio	KI-Studio anzeigen
+	Enable AI	KI aktivieren
+	Enable AI to generate images	KI zum Generieren von Bildern aktivieren
+	AI disabled	KI deaktiviert
+	Generation details	Generierungsdetails
+	Generating	Wird generiert
+	Ready	Bereit
+	New document	Neues Dokument

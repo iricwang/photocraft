@@ -3745,3 +3745,72 @@ curves	Smooth	Згладити
 	Light Red	Світло-червоний
 	Medium Blue	Середньо-синій
 	Light Gray	Світло-сірий
+# Native AI candidate review
+	AI Studio	Студія ШІ
+	Close AI Studio	Закрити студію ШІ
+	Local Test Provider	Локальний тестовий генератор
+	Prompt	Запит
+	Create Test Candidate	Створити тестовий варіант
+	Candidate	Варіант
+	Document changed	Документ змінено
+	Candidate ready	Варіант готовий
+	Candidate applied	Варіант застосовано
+	Candidate discarded	Варіант відхилено
+# Native AI candidate action
+	Discard	Відхилити
+# Native image generation
+	Provider	Постачальник
+	Connection settings	Налаштування підключення
+	Base URL	Базова URL-адреса
+	API key (session only)	Ключ API (лише цей сеанс)
+	Codex executable (optional)	Програма Codex (необов’язково)
+	Codex model (automatic if empty)	Модель Codex (порожнє = автоматично)
+	Use current layer as reference	Поточний шар як зразок
+	Generate image	Створити зображення
+	Generating image...	Створення зображення...
+	Generation cancelled	Створення скасовано
+	Refresh models	Оновити моделі
+	Optimizing prompt...	Оптимізація запиту...
+	Optimized prompt	Оптимізований запит
+	Hidden	Прихована
+	Generation history	Історія генерацій
+	Generate again	Створити ще варіант
+	New generation	Нова генерація
+	Remove generation record	Видалити запис генерації
+	Generation mode	Режим генерації
+	In-place edit	Локальне редагування
+	Transparent component	Прозорий елемент
+	Generation settings	Налаштування генерації
+	Describe your edit	Опишіть зміну
+	Component set (1 image)	Набір компонентів (1 зображення)
+	Player preset	Шаблон програвача
+	Buttons	Кнопки
+	Tracks	Повзунки
+	Generating asset set...	Створення набору елементів...
+	Arranging asset layers...	Розміщення шарів...
+	Reference images	Референсні зображення
+	Choose reference image	Вибрати референсне зображення
+	Paste reference image	Вставити референсне зображення
+	Remove reference image	Видалити референсне зображення
+	No image on the clipboard	У буфері обміну немає зображення
+	Clipboard image	Зображення з буфера обміну
+	Preparing reference image...	Підготовка референсного зображення...
+	Linking Codex project...	Пов’язування проєкту Codex...
+	Wait for the current operation to finish	Дочекайтеся завершення поточної операції
+	Up to 4 reference images	Не більше 4 референсних зображень
+	Reference image exceeds 32 MB	Референсне зображення перевищує 32 МБ
+	Reasoning effort	Рівень міркування
+	Minimal	Мінімальний
+	Extra high	Дуже високий
+	Ultra	Найвищий
+	Model settings	Налаштування моделі
+	Hide model settings	Приховати налаштування моделі
+	Show/Hide Model Settings	Показати/приховати налаштування моделі
+	Collapse AI Studio	Згорнути Студію ШІ
+	Show AI Studio	Показати Студію ШІ
+	Enable AI	Увімкнути ШІ
+	Enable AI to generate images	Увімкніть ШІ для створення зображень
+	AI disabled	ШІ вимкнено
+	Generation details	Подробиці генерації
+	Generating	Генерація
+	Ready	Готово

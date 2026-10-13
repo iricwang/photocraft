@@ -383,6 +383,9 @@ pub struct Panels {
     pub properties: bool,
     pub color: bool,
     pub navigator: bool,
+    /// Dockable AI model and connection settings, independent of the prompt bar.
+    #[serde(default, rename = "aiSettings", alias = "ai_settings")]
+    pub ai_settings: bool,
     pub toolbar: bool,
     pub options_bar: bool,
     pub status_bar: bool,
@@ -423,6 +426,7 @@ impl Default for Panels {
             properties: true,
             color: true,
             navigator: false,
+            ai_settings: false,
             toolbar: true,
             options_bar: true,
             status_bar: true,
@@ -995,6 +999,8 @@ impl Default for Extras {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct DockTabs {
+    #[serde(rename = "aiSettings", alias = "ai_settings")]
+    pub ai_settings: usize,
     pub properties: usize,
     pub color: usize,
     pub layers: usize,
@@ -1015,8 +1021,63 @@ pub struct ColorPanelState {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct AiPanelState {
+    /// Allows new generations; hiding either AI surface does not change this preference.
+    pub enabled: bool,
+    pub batch_components: bool,
+    pub component_buttons: String,
+    pub component_bars: String,
+    pub expand_component: bool,
+    pub design_first: bool,
+    pub mode: photocraft_doc::ai::GenerationMode,
+    pub visible: bool,
+    pub prompt: String,
+    pub preview: bool,
+    pub status: String,
+    pub provider: String,
+    pub base_url: String,
+    pub model: String,
+    pub codex_path: String,
+    pub codex_model: String,
+    pub codex_reasoning_effort: String,
+    pub reference: bool,
+    pub history_document: Option<u64>,
+    pub history_group: Option<u64>,
+}
+
+impl Default for AiPanelState {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            batch_components: false,
+            component_buttons: "Play\nPause\nPrevious\nNext\nShuffle\nRepeat\nFavorite\nVolume".into(),
+            component_bars: "Playback progress\nVolume slider".into(),
+            expand_component: false,
+            design_first: false,
+            mode: Default::default(),
+            visible: true,
+            prompt: String::new(),
+            preview: true,
+            status: String::new(),
+            provider: "codex".into(),
+            base_url: "https://api.openai.com/v1".into(),
+            model: "gpt-image-2".into(),
+            codex_path: String::new(),
+            codex_model: String::new(),
+            codex_reasoning_effort: String::new(),
+            reference: false,
+            history_document: None,
+            history_group: None,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct UiState {
     pub tool: Tool,
+    #[serde(default)]
+    pub ai: AiPanelState,
     /// The last tool used in each shortcut group (the tools sharing a key, [`Tool::key`]), at most
     /// one per group: the group's key brings it back, as in Photoshop (#2608).
     #[serde(default)]
@@ -1231,6 +1292,7 @@ impl Default for UiState {
     fn default() -> Self {
         Self {
             tool: Tool::Brush,
+            ai: AiPanelState::default(),
             group_tools: Vec::new(),
             recent_files: Vec::new(),
             text_edit: None,
@@ -1355,6 +1417,22 @@ impl UiState {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ai_defaults_are_enabled_visible_and_backward_compatible() {
+        let defaults = AiPanelState::default();
+        assert!(defaults.enabled && defaults.visible);
+        assert_eq!(serde_json::from_value::<AiPanelState>(serde_json::json!({})).unwrap(), defaults);
+        let legacy: AiPanelState = serde_json::from_value(serde_json::json!({"visible": false})).unwrap();
+        assert!(legacy.enabled, "older preferences must enable AI without changing explicit visibility");
+        assert!(!legacy.visible);
+        let disabled: AiPanelState = serde_json::from_value(serde_json::json!({"enabled": false, "visible": true})).unwrap();
+        assert!(!disabled.enabled && disabled.visible);
+        let restored: AiPanelState = serde_json::from_value(serde_json::to_value(&disabled).unwrap()).unwrap();
+        assert_eq!(restored, disabled);
+        assert!(!Panels::default().ai_settings);
+        assert_eq!(DockTabs::default().ai_settings, 0);
+    }
 
     #[test]
     fn tool_names_parse() {

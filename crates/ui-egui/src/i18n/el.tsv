@@ -3745,3 +3745,70 @@ curves	Smooth	Εξομάλυνση
 	Light Red	Ανοιχτό κόκκινο
 	Medium Blue	Μεσαίο μπλε
 	Light Gray	Ανοιχτό γκρι
+# Native AI candidate review
+	AI Studio	Στούντιο AI
+	Close AI Studio	Κλείσιμο στούντιο AI
+	Local Test Provider	Τοπική δοκιμαστική γεννήτρια
+	Prompt	Οδηγία
+	Create Test Candidate	Δημιουργία δοκιμαστικής πρότασης
+	Candidate	Πρόταση
+	Document changed	Το έγγραφο άλλαξε
+	Candidate ready	Η πρόταση είναι έτοιμη
+	Candidate applied	Η πρόταση εφαρμόστηκε
+	Candidate discarded	Η πρόταση απορρίφθηκε
+# Native AI candidate action
+	Discard	Απόρριψη
+# Native image generation
+	Provider	Πάροχος
+	Connection settings	Ρυθμίσεις σύνδεσης
+	Base URL	Βασική διεύθυνση URL
+	API key (session only)	Κλειδί API (μόνο συνεδρία)
+	Codex executable (optional)	Εκτελέσιμο Codex (προαιρετικό)
+	Codex model (automatic if empty)	Μοντέλο Codex (κενό = αυτόματο)
+	Use current layer as reference	Τρέχουσα στρώση ως αναφορά
+	Generate image	Δημιουργία εικόνας
+	Generating image...	Δημιουργία εικόνας...
+	Generation cancelled	Η δημιουργία ακυρώθηκε
+	Refresh models	Ανανέωση μοντέλων
+	Optimizing prompt...	Βελτιστοποίηση προτροπής...
+	Optimized prompt	Βελτιστοποιημένη προτροπή
+	Generation history	Ιστορικό δημιουργίας
+	Generate again	Δημιουργία ξανά
+	New generation	Νέα δημιουργία
+	Remove generation record	Αφαίρεση εγγραφής δημιουργίας
+	Generation mode	Λειτουργία δημιουργίας
+	In-place edit	Τοπική επεξεργασία
+	Transparent component	Διαφανές στοιχείο
+	Generation settings	Ρυθμίσεις δημιουργίας
+	Describe your edit	Περιγράψτε την αλλαγή
+	Component set (1 image)	Σύνολο στοιχείων (1 εικόνα)
+	Player preset	Πρότυπο αναπαραγωγής
+	Buttons	Κουμπιά
+	Tracks	Ρυθμιστικά
+	Generating asset set...	Δημιουργία συνόλου στοιχείων...
+	Arranging asset layers...	Διάταξη επιπέδων στοιχείων...
+	Reference images	Εικόνες αναφοράς
+	Choose reference image	Επιλογή εικόνας αναφοράς
+	Paste reference image	Επικόλληση εικόνας αναφοράς
+	Remove reference image	Αφαίρεση εικόνας αναφοράς
+	No image on the clipboard	Δεν υπάρχει εικόνα στο πρόχειρο
+	Clipboard image	Εικόνα προχείρου
+	Preparing reference image...	Προετοιμασία εικόνας αναφοράς...
+	Linking Codex project...	Σύνδεση έργου Codex...
+	Wait for the current operation to finish	Περιμένετε να ολοκληρωθεί η τρέχουσα λειτουργία
+	Up to 4 reference images	Έως 4 εικόνες αναφοράς
+	Reference image exceeds 32 MB	Η εικόνα αναφοράς υπερβαίνει τα 32 MB
+	Reasoning effort	Επίπεδο συλλογισμού
+	Minimal	Ελάχιστο
+	Extra high	Πολύ υψηλό
+	Ultra	Υπέρτατο
+	Model settings	Ρυθμίσεις μοντέλου
+	Hide model settings	Απόκρυψη ρυθμίσεων μοντέλου
+	Show/Hide Model Settings	Εμφάνιση/απόκρυψη ρυθμίσεων μοντέλου
+	Collapse AI Studio	Σύμπτυξη Στούντιο AI
+	Show AI Studio	Εμφάνιση Στούντιο AI
+	Enable AI	Ενεργοποίηση AI
+	Enable AI to generate images	Ενεργοποιήστε το AI για να δημιουργήσετε εικόνες
+	AI disabled	Το AI είναι απενεργοποιημένο
+	Generation details	Λεπτομέρειες δημιουργίας
+	Generating	Δημιουργία σε εξέλιξη

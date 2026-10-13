@@ -3644,3 +3644,72 @@ curves	Smooth	Wygładź
 	Light Red	Jasnoczerwony
 	Medium Blue	Średnioniebieski
 	Light Gray	Jasnoszary
+# Native AI candidate review
+	AI Studio	Studio AI
+	Close AI Studio	Zamknij studio AI
+	Local Test Provider	Lokalny generator testowy
+	Prompt	Polecenie
+	Create Test Candidate	Utwórz wariant testowy
+	Candidate	Wariant
+	Document changed	Dokument został zmieniony
+	Candidate ready	Wariant gotowy
+	Candidate applied	Wariant zastosowany
+	Candidate discarded	Wariant odrzucony
+# Native AI candidate action
+	Discard	Odrzuć
+# Native image generation
+	Provider	Dostawca
+	Connection settings	Ustawienia połączenia
+	Base URL	Bazowy URL
+	API key (session only)	Klucz API (tylko ta sesja)
+	Codex executable (optional)	Program Codex (opcjonalnie)
+	Codex model (automatic if empty)	Model Codex (puste = automatycznie)
+	Use current layer as reference	Użyj bieżącej warstwy jako wzorca
+	Generate image	Generuj obraz
+	Generating image...	Generowanie obrazu...
+	Generation cancelled	Generowanie anulowane
+	Refresh models	Odśwież modele
+	Optimizing prompt...	Optymalizowanie polecenia...
+	Optimized prompt	Zoptymalizowane polecenie
+	Hidden	Ukryty
+	Generation history	Historia generowania
+	Generate again	Generuj ponownie
+	New generation	Nowe generowanie
+	Remove generation record	Usuń zapis generowania
+	Generation mode	Tryb generowania
+	In-place edit	Edycja miejscowa
+	Transparent component	Przezroczysty element
+	Generation settings	Ustawienia generowania
+	Describe your edit	Opisz zmianę
+	Component set (1 image)	Zestaw elementów (1 obraz)
+	Player preset	Szablon odtwarzacza
+	Buttons	Przyciski
+	Tracks	Suwaki
+	Generating asset set...	Generowanie zestawu elementów...
+	Arranging asset layers...	Rozmieszczanie warstw...
+	Reference images	Obrazy referencyjne
+	Choose reference image	Wybierz obraz referencyjny
+	Paste reference image	Wklej obraz referencyjny
+	Remove reference image	Usuń obraz referencyjny
+	No image on the clipboard	Brak obrazu w schowku
+	Clipboard image	Obraz ze schowka
+	Preparing reference image...	Przygotowywanie obrazu referencyjnego...
+	Linking Codex project...	Łączenie projektu Codex...
+	Wait for the current operation to finish	Poczekaj na zakończenie bieżącej operacji
+	Up to 4 reference images	Maksymalnie 4 obrazy referencyjne
+	Reference image exceeds 32 MB	Obraz referencyjny przekracza 32 MB
+	Reasoning effort	Poziom rozumowania
+	Minimal	Minimalny
+	Extra high	Bardzo wysoki
+	Ultra	Ultra
+	Model settings	Ustawienia modelu
+	Hide model settings	Ukryj ustawienia modelu
+	Show/Hide Model Settings	Pokaż/ukryj ustawienia modelu
+	Collapse AI Studio	Zwiń Studio AI
+	Show AI Studio	Pokaż Studio AI
+	Enable AI	Włącz AI
+	Enable AI to generate images	Włącz AI, aby generować obrazy
+	AI disabled	AI wyłączona
+	Generation details	Szczegóły generowania
+	Generating	Generowanie
+	Ready	Gotowe

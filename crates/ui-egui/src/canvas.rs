@@ -1024,6 +1024,13 @@ pub(crate) fn display_doc(app: &mut PhotocraftApp, idx: usize) -> (std::sync::Ar
     if let Some(l) = live_stroke(app, idx) {
         return (l.stroke.doc().clone(), l.display_key());
     }
+    if app.ui.ai.preview
+        && app.session.active_index() == Some(idx)
+        && let Some(candidate) = app.session.ai.candidate()
+        && let Some(shown) = candidate.preview(&app.session)
+    {
+        return (shown, (1 << 48) + candidate.id);
+    }
     if let (Some(t), Some(pv)) = (&app.ui.transform, &app.transform_preview)
         && app.session.active_index() == Some(idx)
         && st.doc.layer(photocraft_doc::LayerId(t.layer)).is_some()
@@ -1671,6 +1678,10 @@ pub(crate) fn retain_gpu_documents(app: &mut PhotocraftApp) {
 /// Tabs + canvas for the active document, or the start screen; then drops layers dragged onto
 /// another document (`layer_transfer`).
 pub fn document_area(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+    // Keep workspace-anchored controls in place even before a document is opened.
+    if app.session.active_index().is_none() {
+        app.last_canvas_rect = ui.available_rect_before_wrap();
+    }
     documents(app, ui);
     crate::layer_transfer::finish(app, ui.ctx());
     // Once a frame, not per document view: the right-click or options-bar Brush Preset picker.

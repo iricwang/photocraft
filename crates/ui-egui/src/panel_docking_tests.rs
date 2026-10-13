@@ -7,6 +7,104 @@ fn app() -> PhotocraftApp {
 }
 
 #[test]
+fn model_settings_visibility_is_independent_of_ai_and_does_not_promote_the_main_dock() {
+    let mut app = app();
+    assert!(!ai_settings_shown(&app));
+    app.ui.ai.enabled = false;
+    app.ui.ai.visible = false;
+    let ai = app.ui.ai.clone();
+    let dock = app.ui.dock.clone();
+    for showing in [true, false, true, false] {
+        toggle_ai_settings(&mut app).unwrap();
+        assert_eq!(ai_settings_shown(&app), showing);
+        assert_eq!(app.ui.ai, ai);
+        assert_eq!(app.ui.dock, dock);
+        assert!(app.ui.docking.is_none());
+        assert!(app.ui.panels.color && app.ui.panels.properties && app.ui.panels.layers);
+    }
+    let before = serde_json::to_value(&app.ui).unwrap();
+    assert!(command(&mut app, "window.toggle.aiSettings", &json!({"show":"yes"})).unwrap().is_err());
+    assert_eq!(serde_json::to_value(&app.ui).unwrap(), before);
+}
+
+#[test]
+fn model_settings_flyout_does_not_resize_or_replace_the_existing_panels() {
+    let mut h = harness(app(), vec2(1280.0, 800.0));
+    let before = crate::dock::last_rects(&h.ctx);
+    set_ai_settings_visible(h.state_mut(), true).unwrap();
+    h.run_steps(4);
+    assert_eq!(crate::dock::last_rects(&h.ctx), before);
+    assert!(h.state().ui.docking.is_none());
+    let flyout = h.ctx.memory(|memory| memory.area_rect(egui::Id::new("ai-settings-rail-flyout"))).unwrap();
+    let main_left = before.iter().map(|(_, rect)| rect.left()).fold(f32::INFINITY, f32::min);
+    assert!(flyout.right() < main_left, "flyout stays beside the primary dock: {flyout:?}");
+    assert!(flyout.height() < 360.0, "model settings sizes to its compact body: {flyout:?}");
+    set_ai_settings_visible(h.state_mut(), false).unwrap();
+    h.run_steps(3);
+    assert_eq!(crate::dock::last_rects(&h.ctx), before);
+}
+
+#[test]
+fn model_settings_opens_beside_an_existing_custom_workspace_without_changing_its_tree() {
+    let mut app = app();
+    app.run("window.panel.move", json!({"panel":"swatches","anchor":"layers"})).unwrap();
+    let before = app.ui.docking.clone();
+    assert!(!app.ui.docking_hidden.contains_key("aiSettings"));
+    app.run("window.panel.activate", json!({"panel":"aiSettings"})).unwrap();
+    sync_visibility(&mut app);
+    assert!(ai_settings_shown(&app));
+    assert_eq!(app.ui.docking, before);
+    set_ai_settings_visible(&mut app, false).unwrap();
+    assert!(!ai_settings_shown(&app));
+    assert_eq!(app.ui.docking, before);
+}
+
+#[test]
+fn model_settings_docking_and_visibility_preserve_its_return_position_and_neighbor_tabs() {
+    let mut app = app();
+    let ai = app.ui.ai.clone();
+    set_ai_settings_visible(&mut app, true).unwrap();
+    app.run("window.panel.move", json!({"panel":"aiSettings","anchor":"layers"})).unwrap();
+    let before = app.ui.docking.clone().unwrap();
+    let members = group_members(&before, "aiSettings");
+    assert!(members.contains(&"layers".to_owned()));
+    set_ai_settings_visible(&mut app, false).unwrap();
+    assert!(app.ui.docking.as_ref().unwrap().contains(&"layers".to_owned()));
+    assert!(!app.ui.docking.as_ref().unwrap().contains(&"aiSettings".to_owned()));
+    set_ai_settings_visible(&mut app, true).unwrap();
+    assert_eq!(group_members(app.ui.docking.as_ref().unwrap(), "aiSettings"), members);
+    assert!(ai_settings_shown(&app));
+    app.run("window.panel.float", json!({"panel":"aiSettings","x":80,"y":90,"height":220})).unwrap();
+    let floating = app.ui.docking.clone();
+    set_ai_settings_visible(&mut app, false).unwrap();
+    set_ai_settings_visible(&mut app, true).unwrap();
+    assert_eq!(app.ui.docking, floating);
+    assert_eq!(app.ui.ai, ai);
+    assert!(valid(app.ui.docking.as_ref().unwrap()));
+}
+
+#[test]
+fn model_settings_title_drag_floats_and_redocks_without_losing_other_panels() {
+    let mut app = app();
+    set_ai_settings_visible(&mut app, true).unwrap();
+    let original = legacy(&app).panels().into_iter().cloned().collect::<Vec<_>>();
+    let mut h = harness(app, vec2(1280.0, 800.0));
+    let source = h.query_all_by_label("Model settings").find(|node| node.rect().width() > 100.0).unwrap().rect().center();
+    drag(&mut h, source, egui::pos2(180.0, 150.0));
+    let layout = h.state().ui.docking.as_ref().unwrap();
+    assert!(layout.floating.iter().any(|group| group.panels.contains(&"aiSettings".to_owned())));
+    assert!(original.iter().all(|panel| layout.contains(panel)));
+    let source = h.ctx.read_response(egui::Id::new("photocraft-panel-docking").with(("tab", &"aiSettings".to_string()))).unwrap().rect.center();
+    let destination = h.ctx.read_response(egui::Id::new("photocraft-panel-docking").with(("tab", &"layers".to_string()))).unwrap().rect.center();
+    drag(&mut h, source, destination);
+    let layout = h.state().ui.docking.as_ref().unwrap();
+    assert!(!layout.floating.iter().any(|group| group.panels.contains(&"aiSettings".to_owned())));
+    assert!(group_members(layout, "layers").contains(&"aiSettings".to_owned()));
+    assert!(original.iter().all(|panel| layout.contains(panel)));
+    assert!(valid(layout));
+}
+
+#[test]
 fn panel_commands_group_split_reorder_float_and_restore_without_duplicate_ownership() {
     let mut app = app();
     app.run("window.panel.move", json!({"panel":"swatches", "anchor":"layers", "zone":"top"})).unwrap();

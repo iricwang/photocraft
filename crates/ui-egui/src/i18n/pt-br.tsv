@@ -3837,3 +3837,70 @@ layerLabel	No Color	Sem cor
 	Light Red	Vermelho-claro
 	Medium Blue	Azul médio
 	Light Gray	Cinza-claro
+# Native AI candidate review
+	AI Studio	Estúdio de IA
+	Close AI Studio	Fechar estúdio de IA
+	Local Test Provider	Gerador de teste local
+	Prompt	Instrução
+	Create Test Candidate	Criar candidato de teste
+	Candidate	Candidato
+	Document changed	Documento alterado
+	Candidate ready	Candidato pronto
+	Candidate applied	Candidato aplicado
+	Candidate discarded	Candidato descartado
+# Native AI candidate action
+	Discard	Descartar
+# Native image generation
+	Provider	Provedor
+	Connection settings	Configurações de conexão
+	Base URL	URL base
+	API key (session only)	Chave API (somente nesta sessão)
+	Codex executable (optional)	Executável Codex (opcional)
+	Codex model (automatic if empty)	Modelo Codex (vazio = automático)
+	Use current layer as reference	Usar camada atual como referência
+	Generate image	Gerar imagem
+	Generating image...	Gerando imagem...
+	Generation cancelled	Geração cancelada
+	Refresh models	Atualizar modelos
+	Optimizing prompt...	Otimizando prompt...
+	Optimized prompt	Prompt otimizado
+	Generation history	Histórico de geração
+	Generate again	Gerar novamente
+	New generation	Nova geração
+	Remove generation record	Remover registro de geração
+	Generation mode	Modo de geração
+	In-place edit	Edição local
+	Transparent component	Componente transparente
+	Generation settings	Configurações de geração
+	Describe your edit	Descreva a alteração
+	Component set (1 image)	Conjunto de componentes (1 imagem)
+	Player preset	Predefinição de player
+	Buttons	Botões
+	Tracks	Controles deslizantes
+	Generating asset set...	Gerando conjunto de elementos...
+	Arranging asset layers...	Organizando camadas...
+	Reference images	Imagens de referência
+	Choose reference image	Escolher imagem de referência
+	Paste reference image	Colar imagem de referência
+	Remove reference image	Remover imagem de referência
+	No image on the clipboard	Nenhuma imagem na área de transferência
+	Clipboard image	Imagem da área de transferência
+	Preparing reference image...	Preparando imagem de referência...
+	Linking Codex project...	Vinculando projeto do Codex...
+	Wait for the current operation to finish	Aguarde o término da operação atual
+	Up to 4 reference images	Até 4 imagens de referência
+	Reference image exceeds 32 MB	A imagem de referência excede 32 MB
+	Reasoning effort	Nível de raciocínio
+	Minimal	Mínimo
+	Extra high	Muito alto
+	Ultra	Ultra
+	Model settings	Configurações do modelo
+	Hide model settings	Ocultar configurações do modelo
+	Show/Hide Model Settings	Mostrar/ocultar configurações do modelo
+	Collapse AI Studio	Recolher Estúdio de IA
+	Show AI Studio	Mostrar Estúdio de IA
+	Enable AI	Ativar IA
+	Enable AI to generate images	Ative a IA para gerar imagens
+	AI disabled	IA desativada
+	Generation details	Detalhes da geração
+	Generating	Gerando

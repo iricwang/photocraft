@@ -367,6 +367,22 @@ pub fn native(automation: Option<photocraft_automation::AuthorizedWorkspace>) ->
         }) as photocraft_ui_egui::AutomationCommandFn
     });
     Services {
+        ai_generate: Some(Box::new(crate::ai_generation::start)),
+        ai_models: Some(Box::new(crate::ai_generation::start_models)),
+        project_sync: Some(crate::project_memory::sync_service()),
+        project_sync_status: Some(Box::new(crate::project_memory::sync_status)),
+        load_ai_settings: Some(Box::new(|| {
+            let path = config_dir()?.join("ai-settings.json");
+            if std::fs::metadata(&path).ok()?.len() > 32 * 1024 {
+                return None;
+            }
+            std::fs::read_to_string(path).ok()
+        })),
+        save_ai_settings: Some(Box::new(|text| {
+            let settings: serde_json::Value = serde_json::from_str(text).map_err(|_| "Invalid AI settings")?;
+            crate::ai_generation::endpoint(settings["baseUrl"].as_str().ok_or("Missing Base URL")?, false)?;
+            write_atomic(&config_dir().ok_or("no config directory")?.join("ai-settings.json"), text.as_bytes())
+        })),
         import: Some(Box::new(|name: &str, bytes: &[u8], max_svg_group_depth: usize| {
             crate::crash_guard::guard("Open", || {
                 photocraft_io::import_with_svg_group_depth(name, bytes, max_svg_group_depth).map(|r| (r.document, r.warnings)).map_err(|e| e.to_string())

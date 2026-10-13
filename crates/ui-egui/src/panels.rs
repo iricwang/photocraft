@@ -1575,6 +1575,7 @@ pub fn right_dock(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     let customized = crate::panel_docking::show(app, ui);
     let t = Tokens::get(ui.ctx());
     let p = app.ui.panels.clone();
+    let mut rail_rect = None;
     if t.pro && !customized {
         dock_panels(app, ui, &p, &t);
     }
@@ -1588,12 +1589,18 @@ pub fn right_dock(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
             .show(ui, |ui| {
                 // The separator is on the canvas side.
                 let r = ui.max_rect();
+                rail_rect = Some(r);
                 let x = if crate::direction::is_rtl() { r.right() + 6.0 } else { r.left() - 6.0 };
                 ui.painter().line_segment([pos2(x, r.top() - 8.0), pos2(x, r.bottom() + 8.0)], Stroke::new(1.0, t.separator));
                 ui.spacing_mut().item_spacing.y = 4.0;
+                if icons::rail_button(ui, "sliders-horizontal", rb, crate::panel_docking::ai_settings_shown(app), tl!("Model settings")).clicked()
+                    && let Err(error) = crate::panel_docking::toggle_ai_settings(app)
+                {
+                    app.ui.status = error;
+                }
                 use crate::dock::Group;
                 let entries: [(&str, &str, Group); 5] = [
-                    ("sliders-horizontal", tl!("Properties"), Group::Properties),
+                    ("settings", tl!("Properties"), Group::Properties),
                     ("navigation", tl!("Navigator"), Group::Navigator),
                     ("palette", tl!("Color & Swatches"), Group::Color),
                     ("layers", tl!("Layers"), Group::Layers),
@@ -1616,7 +1623,55 @@ pub fn right_dock(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     if !t.pro && !customized {
         dock_panels(app, ui, &p, &t);
     }
+    ai_settings_flyout(app, ui, rail_rect);
     crate::dock::persist(app, ui.ctx());
+}
+
+/// The compact rail flyout does not change the main dock's geometry. Its title can be
+/// dragged into the existing docking system, which then owns its position and tab group.
+pub(crate) fn ai_settings_flyout(app: &mut PhotocraftApp, ui: &mut egui::Ui, rail: Option<Rect>) {
+    if !app.ui.panels.ai_settings || app.ui.docking.as_ref().is_some_and(|layout| layout.contains(&"aiSettings".to_owned())) {
+        return;
+    }
+    let t = Tokens::get(ui.ctx());
+    let screen = ui.ctx().content_rect();
+    let width = 272.0_f32.min((screen.width() - 32.0).max(120.0));
+    let rail = rail.unwrap_or_else(|| Rect::from_min_size(ui.max_rect().right_top(), egui::Vec2::ZERO));
+    let x = if crate::direction::is_rtl() { rail.right() + 8.0 } else { rail.left() - width - 24.0 };
+    let position = pos2(x.max(screen.left() + 8.0), rail.top().max(screen.top() + 8.0));
+    egui::Area::new(egui::Id::new("ai-settings-rail-flyout")).order(egui::Order::Middle).fixed_pos(position).movable(false).show(ui.ctx(), |ui| {
+        // A rail flyout sizes to its body. Reset the previous frame's height limit so
+        // expanding connection controls can grow before the scroll area clamps them.
+        ui.set_max_height((screen.bottom() - position.y).max(64.0));
+        egui::Frame::popup(ui.style()).fill(t.card).stroke(Stroke::new(1.0, t.card_border)).inner_margin(8).show(ui, |ui| {
+            ui.set_width(width);
+            let header = ui
+                .horizontal(|ui| {
+                    let (rect, response) = ui.allocate_exact_size(vec2((ui.available_width() - 28.0).max(72.0), 24.0), Sense::click_and_drag());
+                    for x in [4.0, 9.0] {
+                        for y in [-4.0, 0.0, 4.0] {
+                            ui.painter().circle_filled(pos2(rect.left() + x, rect.center().y + y), 1.0, t.text_faint);
+                        }
+                    }
+                    ui.painter().text(rect.left_center() + vec2(20.0, 0.0), Align2::LEFT_CENTER, tl!("Model settings"), theme::semibold(12.0), t.text);
+                    response.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, tl!("Model settings")));
+                    if icons::button(ui, "chevrons-right", 24.0, false, tl!("Hide model settings")).clicked()
+                        && let Err(error) = crate::panel_docking::set_ai_settings_visible(app, false)
+                    {
+                        app.ui.status = error;
+                    }
+                    response.on_hover_cursor(egui::CursorIcon::Grab)
+                })
+                .inner;
+            ui.add_space(4.0);
+            egui::ScrollArea::vertical()
+                .id_salt("ai-settings-flyout-body")
+                .max_height((screen.bottom() - position.y - 64.0).max(64.0))
+                .auto_shrink([false, true])
+                .show(ui, |ui| crate::ai_panel::settings_content(app, ui));
+            crate::panel_docking::legacy_tab(app, ui, "aiSettings", &header);
+        });
+    });
 }
 
 /// The dock's width range (points). It is the right dock, on the left in a right-to-left UI.
@@ -1673,6 +1728,7 @@ pub(crate) fn dock_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, group: crate
         (Group::Color, _) => color_picker(app, ui),
         (Group::Properties, 0) => properties_body(app, ui),
         (Group::Properties, _) => adjustments_grid(app, ui),
+        (Group::AiSettings, _) => crate::ai_panel::settings_content(app, ui),
         (Group::Character, tab) => crate::type_tool::character_panel(app, ui, tab == 1),
         (Group::Navigator, 0) => navigator(app, ui),
         (Group::Navigator, 1) => crate::tone::histogram_panel(app, ui),

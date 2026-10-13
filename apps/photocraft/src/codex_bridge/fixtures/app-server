@@ -1,0 +1,19 @@
+# Local protocol smoke-test fixture, invoked by Python as the mock Codex CLI.
+# This never starts Codex or any model.
+import json
+import sys
+
+for line in sys.stdin:
+    request = json.loads(line)
+    if "id" not in request:
+        continue
+    method = request.get("method")
+    if method == "initialize":
+        result = {"userAgent": "mock-backend"}
+    elif method == "thread/resume":
+        result = {"thread": {"id": "same-thread", "status": {"type": "idle"}, "turns": []}}
+    elif method == "turn/start":
+        result = {"turn": {"id": "fake-turn", "status": "inProgress"}}
+    else:
+        result = {"ok": True}
+    print(json.dumps({"id": request["id"], "result": result}), flush=True)

@@ -21,9 +21,14 @@ fn harness() -> Option<Harness> {
 /// The app with the GPU canvas (`gpu`), or without it: the CPU fallback path.
 fn harness_with(gpu: bool) -> Option<Harness> {
     let built = std::panic::catch_unwind(|| {
-        egui_kittest::Harness::builder().with_size(egui::vec2(1400.0, 800.0)).with_pixels_per_point(1.0).with_max_steps(64).wgpu().build_eframe(|cc| {
+        // Keep the largest 576px sample clear of the collapsed restore control at the bottom.
+        egui_kittest::Harness::builder().with_size(egui::vec2(1400.0, 960.0)).with_pixels_per_point(1.0).with_max_steps(64).wgpu().build_eframe(|cc| {
             PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
             let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+            // Checker measurements need unobstructed canvas pixels, without the
+            // generation composer or an accented restore button in the sample area.
+            app.ui.ai.visible = false;
+            app.ui.ai.enabled = false;
             if let Some(rs) = cc.wgpu_render_state.as_ref().filter(|_| gpu) {
                 app.set_wgpu(rs.clone());
             }

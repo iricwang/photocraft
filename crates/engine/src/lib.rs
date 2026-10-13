@@ -10,10 +10,16 @@
 pub mod actions_cmds;
 pub mod adjust_cmds;
 pub mod adjust_params;
+pub mod ai_assets;
+pub mod ai_cmds;
+mod ai_component;
+pub mod ai_history_cmds;
+pub mod ai_project_cmds;
 pub mod align_cmds;
 mod allocation;
 pub mod analysis_cmds;
 pub mod artboard_cmds;
+pub mod asset_cmds;
 pub mod automate_cmds;
 pub mod background_cmds;
 pub mod brush_cmds;
@@ -177,6 +183,9 @@ pub(crate) fn active_layer_of(s: &Session) -> std::result::Result<&photocraft_do
 /// Per-document editing state.
 #[derive(Clone, Debug)]
 pub struct DocState {
+    /// Process-local admission identity. Reopening a saved document gets a new value even
+    /// when its persisted DocId is unchanged; never serialized into project files.
+    pub open_id: u64,
     pub doc: Arc<Document>,
     pub history: History,
     /// The primary ("key") layer: what single-layer commands act on. Always a member of
@@ -226,10 +235,13 @@ pub struct DocState {
 
 impl DocState {
     pub fn new(doc: Document, path: Option<String>) -> Self {
+        static NEXT_OPEN_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+        let open_id = NEXT_OPEN_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let active_layer = doc.top_layer();
         let mut history = History::default();
         history.set_current_layers(LayerTarget { active: active_layer, selected: active_layer.into_iter().collect() });
         Self {
+            open_id,
             doc: Arc::new(doc),
             history,
             active_layer,
@@ -347,6 +359,9 @@ pub struct Session {
     docs: Vec<DocState>,
     active: Option<usize>,
     pub tools: ToolState,
+    /// Uncommitted AI candidates, never persisted as document content.
+    pub ai: ai_cmds::AiState,
+    pub assets: asset_cmds::State,
     /// Log of executed commands (for action recording and debugging).
     pub journal: Vec<(String, Value)>,
     /// Coalescing key of the command being executed.
@@ -482,6 +497,10 @@ impl Session {
     /// Preserve its identity unless another open document already owns it.
     /// Identity-dependent callers must read the admitted document at the returned index.
     pub fn add_document(&mut self, mut doc: Document, path: Option<String>) -> usize {
+        if !doc.ai_project.id.is_empty() && self.docs.iter().any(|st| st.doc.ai_project.id == doc.ai_project.id) {
+            doc.ai_project.id.clear();
+            doc.ai_project.record("project", "Opened a second copy; AI project identity will be linked independently");
+        }
         // Persisted IDs can overlap the allocator, so check every replacement too.
         while self.docs.iter().any(|st| st.doc.id == doc.id) {
             doc.id = photocraft_doc::DocId::fresh();
@@ -501,6 +520,7 @@ impl Session {
         }
         smart_cmds::on_close(self, index);
         if let Some(id) = self.docs.get(index).map(|d| d.doc.id) {
+            self.ai.forget_document(id);
             self.cancel_jobs_on(id);
             self.subject_cache.forget_doc(id);
         }
@@ -617,6 +637,10 @@ impl Session {
         let mut doc = (*before).clone();
         let mut active = st.active_layer;
         let r = f(&mut doc, &mut active)?;
+        if !before.ai_project.id.is_empty() {
+            doc.ai_project.retain_context_from(&before.ai_project);
+        }
+        ai_project_cmds::record_edit(&mut doc, label, active);
         if let (Some(k), Some(id)) = (restrict, active) {
             channel_cmds::restrict_to_color(&before, &mut doc, id, k);
         }
@@ -675,6 +699,9 @@ impl Session {
         let st = self.active_mut().ok_or(EngineError::NoDocument)?;
         if st.doc.layer(id).is_none() {
             return Err(EngineError::NoLayer(id));
+        }
+        if st.active_layer != Some(id) && !st.doc.ai_project.id.is_empty() {
+            Arc::make_mut(&mut st.doc).ai_project.record("selection", &format!("Selected layer {}", id.0));
         }
         st.active_layer = Some(id);
         st.selected_layers = vec![id];
@@ -741,6 +768,10 @@ impl Session {
         st.coalesce = None;
         match st.history.undo(st.doc.clone()) {
             Some((mut d, layers)) => {
+                if !st.doc.ai_project.id.is_empty() {
+                    Arc::make_mut(&mut d).ai_project.retain_context_from(&st.doc.ai_project);
+                    Arc::make_mut(&mut d).ai_project.record("undo", "Undo document edit");
+                }
                 // Save As changes file identity outside history, just like the saved path.
                 if d.name != st.doc.name {
                     Arc::make_mut(&mut d).name.clone_from(&st.doc.name);
@@ -766,6 +797,10 @@ impl Session {
         st.coalesce = None;
         match st.history.redo(st.doc.clone()) {
             Some((mut d, layers)) => {
+                if !st.doc.ai_project.id.is_empty() {
+                    Arc::make_mut(&mut d).ai_project.retain_context_from(&st.doc.ai_project);
+                    Arc::make_mut(&mut d).ai_project.record("redo", "Redo document edit");
+                }
                 if d.name != st.doc.name {
                     Arc::make_mut(&mut d).name.clone_from(&st.doc.name);
                 }
@@ -827,6 +862,10 @@ pub(crate) fn fix_selection(st: &mut DocState) {
     }
 }
 
+#[cfg(test)]
+mod ai_component_tests;
+#[cfg(test)]
+mod ai_history_tests;
 #[cfg(test)]
 mod fill_layer_mode_tests;
 #[cfg(test)]

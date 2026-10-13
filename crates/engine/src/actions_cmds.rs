@@ -93,6 +93,8 @@ pub fn replayable(id: &str) -> bool {
     // the journal, so they fail where no transform ran yet, e.g. an action played in a new session.
     id == "actions.play"
         || (!id.starts_with("actions.")
+            // Candidate identifiers belong to one session, not to replayable actions.
+            && !id.starts_with("ai.")
             // Browse executes its steps through Session::execute, so those concrete
             // commands are already journaled. Recording the wrapper as well replays
             // every script edit twice (#3057).

@@ -1,0 +1,7 @@
+[
+  ["engine.execute", {"command":"file.new","params":{"width":1261,"height":706,"background":"transparent","name":"AI layout preview"}}],
+  ["engine.execute", {"command":"layer.new.layer","params":{"name":"AI assets"}}],
+  ["ai.configure", {"provider":"codex","codexModel":"GPT-6-Astra","enabled":true,"visible":true,"mode":"component","prompt":"拆分当前界面的所有 UI 部件，保持视觉效果不变。\n生成透明背景素材，并保存为独立图层。"}],
+  ["ui.set", {"theme":"proMedium","zoom":0.8,"center":[630.5,460]}],
+  ["ui.menu.invoke", {"id":"window.panel.aiSettings","params":{"show":true}}]
+]

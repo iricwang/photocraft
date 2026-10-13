@@ -21,6 +21,9 @@ pub const TOP_MENUS: [&str; 10] = ["File", "Edit", "Image", "Layer", "Type", "Se
 
 /// UI-level commands (handled by the shell rather than the engine): id, label, menu, shortcut.
 pub const UI_COMMANDS: &[(&str, &str, &[&str], Option<&str>)] = &[
+    ("window.ai", "AI Studio", &["Window"], None),
+    ("window.panel.aiSettings", "Model settings", &["Window"], None),
+    ("window.toggle.aiSettings", "Show/Hide Model Settings", &[], None),
     ("ui.symmetryTransform", "Transform Symmetry", &[], None),
     // Right-click the options bar's tool icon (#2825); `tool.resetAll` asks first.
     ("tool.reset", "Reset Tool", &[], None),
@@ -161,6 +164,15 @@ pub fn invoke(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, params: Va
 
 /// [`invoke`] without the unsaved-changes prompt, for once the user has already answered it.
 pub(crate) fn invoke_unguarded(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, params: Value) -> Result<Value, String> {
+    if id == "window.ai" {
+        let show = match params.get("show") {
+            None => !app.ui.ai.visible,
+            Some(value) => value.as_bool().ok_or("show must be a boolean")?,
+        };
+        app.ui.ai.visible = show;
+        ctx.request_repaint();
+        return Ok(json!({"show": show}));
+    }
     if id == "ui.symmetryTransform" {
         return crate::symmetry_ui::begin(app).map(|_| Value::Null);
     }
@@ -685,7 +697,7 @@ pub fn is_enabled(app: &PhotocraftApp, id: &str) -> bool {
         return e;
     }
     match id {
-        "window.panel.activate" | "window.panel.layout" => true,
+        "window.panel.activate" | "window.panel.layout" | "window.panel.aiSettings" => true,
         "window.panel.group" | "window.panel.move" | "window.panel.float" | "window.panel.dock" | "window.panel.close" => !app.session.prefs().workspace_locked,
         "file.open" | "file.exit" | "file.clearRecent" | "file.removeRecent" | "help.about" | "help.systemInfo" | "edit.search" => true,
         i if i.starts_with("file.openRecent.") => true,
@@ -696,7 +708,7 @@ pub fn is_enabled(app: &PhotocraftApp, id: &str) -> bool {
             app.session.active().is_some() && app.services.export.is_some()
         }
         i if i.starts_with("window.toggle.") => true,
-        "window.togglePanels" => true,
+        "window.ai" | "window.togglePanels" => true,
         // With one document open the key stays quiet, as in Photoshop, rather than reporting why.
         "window.nextDocument" | "window.previousDocument" => app.session.active().is_some(),
         i if panel_alias(i).is_some() || workspace_name(i).is_some() => true,
@@ -743,6 +755,9 @@ const MODE_CHECKS: [&str; 11] = ["rgb", "grayscale", "cmyk", "lab", "multichanne
 
 /// Is a UI-level panel toggle currently on (for checkmarks)?
 fn checked(app: &PhotocraftApp, id: &str) -> Option<bool> {
+    if id == "window.ai" {
+        return Some(app.ui.ai.visible);
+    }
     if let Some(checked) = crate::panel_docking::checked(app, id) {
         return Some(checked);
     }
@@ -892,6 +907,8 @@ pub fn is_live(id: &str) -> bool {
 /// catalogue spells it differently (Filter › "Other…").
 const PLACE_AFTER: &[(&str, &str)] = &[
     ("file.newFromClipboard", "file.new"),
+    ("window.ai", "window.panel.actions"),
+    ("window.panel.aiSettings", "window.ai"),
     ("filter.render.relight", "filter.render.lightingEffects"),
     ("view.resetView", "view.flipHorizontal"),
     ("filter.other.colorToAlpha", "filter.other.offset"),
@@ -1483,6 +1500,70 @@ pub fn apply_workspace(app: &mut PhotocraftApp) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ai_studio_menu_is_enabled_with_and_without_a_document() {
+        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+        for document in [false, true] {
+            if document {
+                app.run("file.new", json!({"width": 32, "height": 24})).unwrap();
+            }
+            assert!(is_enabled(&app, "window.ai"));
+            let items = menu_items(&app);
+            let item = items.iter().find(|i| i.id == "window.ai").unwrap();
+            assert_eq!(item.path, ["Window"]);
+            assert!(item.enabled);
+            assert_eq!(item.checked, Some(true));
+            let actions = items.iter().position(|i| i.id == "window.panel.actions").unwrap();
+            assert_eq!(items[actions + 1].id, "window.ai");
+        }
+    }
+
+    #[test]
+    fn ai_studio_opens_from_real_window_menu_clicks() {
+        use egui_kittest::{Harness, kittest::Queryable};
+
+        let _language = crate::i18n::language_scope(crate::i18n::Lang::EN);
+        for document in [false, true] {
+            for (width, height) in [(800.0, 480.0), (1280.0, 720.0)] {
+                let mut h = Harness::builder().with_size(egui::vec2(width, height)).with_max_steps(64).build_eframe(move |cc| {
+                    PhotocraftApp::setup_context(&cc.egui_ctx, crate::theme::ThemeKind::ALL[0]);
+                    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+                    app.custom_titlebar = true;
+                    if document {
+                        app.run("file.new", json!({"width": 32, "height": 24})).unwrap();
+                    }
+                    app
+                });
+                h.run_steps(4);
+                let before = h.state().session.active().map(|s| s.doc.clone());
+                assert!(h.state().ui.ai.visible, "document {document}, {width}x{height}");
+                assert!(h.state().ui.ai.enabled);
+                assert!(h.query_by_label("Collapse AI Studio").is_some());
+                assert_eq!(checked(h.state(), "window.ai"), Some(true));
+
+                h.get_by_label("Collapse AI Studio").click();
+                h.run_steps(4);
+                assert!(!h.state().ui.ai.visible);
+                assert!(h.state().ui.ai.enabled, "collapsing the prompt bar must not disable AI");
+                assert!(h.query_by_label("Show AI Studio").is_some());
+                h.get_by_label("Window").click();
+                h.run_steps(4);
+                h.get_by_label("   AI Studio").click();
+                h.run_steps(4);
+                assert!(h.state().ui.ai.visible);
+                let ctx = h.ctx.clone();
+                invoke(h.state_mut(), &ctx, "window.ai", json!({"show":false})).unwrap();
+                assert!(!h.state().ui.ai.visible && h.state().ui.ai.enabled);
+                invoke(h.state_mut(), &ctx, "window.ai", json!({"show":true})).unwrap();
+                match (before, h.state().session.active()) {
+                    (Some(before), Some(active)) => assert!(std::sync::Arc::ptr_eq(&before, &active.doc)),
+                    (None, None) => {}
+                    _ => panic!("opening AI Studio must not change the document"),
+                }
+            }
+        }
+    }
 
     #[test]
     fn sync_with_system_menu_keeps_saved_slots_and_its_checkmark_across_palettes() {

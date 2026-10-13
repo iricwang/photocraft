@@ -83,6 +83,11 @@ pub(crate) fn reidentify_copied_layers(doc: &mut Document) {
         layer.id = LayerId::fresh();
         ids.insert(previous, layer.id);
     });
+    for group in &mut doc.ai_generations {
+        for version in &mut group.versions {
+            version.layer = version.layer.and_then(|id| ids.get(&id).copied());
+        }
+    }
 
     let remap = |comp: &mut photocraft_doc::LayerComp| {
         for state in &mut comp.states {
@@ -661,6 +666,10 @@ fn duplicate(s: &mut Session, p: &Value) -> Result<Value> {
     let d = s.active().ok_or(EngineError::NoDocument)?;
     let mut doc = (*d.doc).clone();
     doc.id = photocraft_doc::DocId::fresh();
+    if !doc.ai_project.id.is_empty() {
+        doc.ai_project.id.clear();
+        doc.ai_project.record("project", "Duplicated document; a new AI project will be linked on first use");
+    }
     doc.name = p.get("name").and_then(Value::as_str).map(str::to_string).unwrap_or_else(|| format!("{} copy", d.doc.name));
     if p.get("mergedOnly").and_then(Value::as_bool).unwrap_or(false) {
         let buf = photocraft_compose::flatten(&doc);
@@ -675,6 +684,7 @@ fn duplicate(s: &mut Session, p: &Value) -> Result<Value> {
         doc.layer_comps.clear();
         doc.last_applied_comp = None;
         doc.last_document_state = None;
+        doc.ai_generations.clear();
     }
     reidentify_copied_layers(&mut doc);
     let name = doc.name.clone();

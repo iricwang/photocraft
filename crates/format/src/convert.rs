@@ -238,6 +238,28 @@ pub(crate) fn doc_m(d: &Document, sink: &mut dyn Sink) -> DocM {
             psd_resources: d.metadata.psd_resources.iter().map(|(id, n, b)| (*id, n.clone(), sink.blob(b))).collect(),
             psd_global_blocks: d.metadata.psd_global_blocks.iter().map(|(s, k, b)| (hex(s), hex(k), sink.blob(b))).collect(),
         },
+        ai_generations: d
+            .ai_generations
+            .iter()
+            .map(|g| GenerationGroupM {
+                id: g.id,
+                canvas: g.canvas,
+                area: g.area,
+                frame: g.frame,
+                selection: g.selection.as_ref().map(|s| surface_m(s, sink)),
+                reference_png: opt_blob(&g.reference_png, sink),
+                mode: g.mode,
+                context_png: opt_blob(&g.context_png, sink),
+                versions: g.versions.clone(),
+            })
+            .collect(),
+        ai_project: ProjectMemoryM {
+            id: d.ai_project.id.clone(),
+            references: d.ai_project.references.iter().map(|r| ProjectReferenceM { id: r.id, name: r.name.clone(), png: sink.blob(&r.png) }).collect(),
+            events: d.ai_project.events.clone(),
+            next_sequence: d.ai_project.next_sequence,
+            last_prompt: d.ai_project.last_prompt.clone(),
+        },
         global_light: d.global_light,
         paths: d.paths.iter().map(|p| NamedPathM { name: p.name.clone(), path: p.path.clone(), psd_raw: opt_blob(&p.psd_raw, sink) }).collect(),
         work_path: d.work_path.clone(),
@@ -607,6 +629,67 @@ impl Loader<'_> {
             }
         }
         let id = if self.preserve_ids { DocId(m.id) } else { DocId::fresh() };
+        if m.ai_generations.len() > photocraft_doc::ai::MAX_GROUPS {
+            return Err(FormatError::LimitExceeded("too many AI generation groups".into()));
+        }
+        let mut ai_generations = Vec::new();
+        let mut group_ids = std::collections::HashSet::new();
+        for g in &m.ai_generations {
+            if g.id == 0
+                || !group_ids.insert(g.id)
+                || g.versions.len() > photocraft_doc::ai::MAX_VERSIONS
+                || g.versions.iter().any(|v| v.prompt.len() > 4096 || v.optimized_prompt.len() > 16384 || v.model.len() > 256 || v.provider.len() > 32)
+            {
+                return Err(FormatError::corrupt("invalid AI generation record"));
+            }
+            let reference_png = self.opt_blob(&g.reference_png)?;
+            let context_png = self.opt_blob(&g.context_png)?;
+            if [&reference_png, &context_png].iter().any(|b| b.as_ref().is_some_and(|b| b.len() > photocraft_doc::ai::MAX_REFERENCE_BYTES)) {
+                return Err(FormatError::LimitExceeded("AI reference exceeds 8 MiB".into()));
+            }
+            let mut versions = g.versions.clone();
+            for v in &mut versions {
+                v.layer = v.layer.and_then(|l| self.id_map.get(&l.0).copied());
+            }
+            let group = photocraft_doc::ai::GenerationGroup {
+                id: g.id,
+                canvas: g.canvas,
+                area: g.area,
+                frame: g.frame,
+                selection: self.opt_surface(&g.selection)?,
+                reference_png,
+                mode: g.mode,
+                context_png,
+                versions,
+            };
+            if !group.is_valid() {
+                return Err(FormatError::corrupt("invalid AI generation geometry"));
+            }
+            ai_generations.push(group);
+        }
+        if m.ai_project.references.len() > photocraft_doc::ai::MAX_PROJECT_REFERENCES || m.ai_project.events.len() > photocraft_doc::ai::MAX_PROJECT_EVENTS {
+            return Err(FormatError::LimitExceeded("AI project memory is too large".into()));
+        }
+        let mut ai_project = photocraft_doc::ai::ProjectMemory {
+            id: m.ai_project.id.clone(),
+            references: Vec::new(),
+            events: m.ai_project.events.clone(),
+            next_sequence: m.ai_project.next_sequence,
+            last_prompt: m.ai_project.last_prompt.clone(),
+        };
+        for r in &m.ai_project.references {
+            let png = self.fetch.blob(&r.png)?;
+            if png.len() > photocraft_doc::ai::MAX_REFERENCE_BYTES {
+                return Err(FormatError::LimitExceeded("AI reference exceeds 8 MiB".into()));
+            }
+            let limits = photocraft_codecs::Limits { max_width: 1536, max_height: 1536, max_pixels: 1536 * 1536, max_alloc: 64 << 20 };
+            photocraft_codecs::decode_with(&png, &photocraft_codecs::DecodeOptions { limits, ..Default::default() })
+                .map_err(|e| FormatError::corrupt(format!("invalid AI reference PNG: {e}")))?;
+            ai_project.references.push(photocraft_doc::ai::ProjectReference { id: r.id, name: r.name.clone(), png });
+        }
+        if !ai_project.is_valid() {
+            return Err(FormatError::corrupt("invalid AI project memory"));
+        }
         Ok(Document {
             id,
             name: m.name.clone(),
@@ -620,6 +703,8 @@ impl Loader<'_> {
             guides: m.guides.clone(),
             selection: self.opt_surface(&m.selection)?,
             metadata: md,
+            ai_generations,
+            ai_project,
             global_light: m.global_light,
             paths,
             work_path: m.work_path.clone(),

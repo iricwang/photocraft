@@ -329,6 +329,77 @@ fn dispatch(app: &mut PhotocraftApp, ctx: &egui::Context, req: &ControlRequest) 
     let u = |k: &str| p.get(k).and_then(Value::as_u64);
     let wait = p.get("wait").and_then(Value::as_bool).unwrap_or(true);
     match req.method.as_str() {
+        "ai.generate" => match crate::ai_service::start(app) {
+            Ok(v) => ok(v),
+            Err(e) => err(e),
+        },
+        "ai.retry" => match u("groupId").ok_or_else(|| "groupId is required".to_owned()).and_then(|id| crate::ai_service::retry(app, id)) {
+            Ok(v) => ok(v),
+            Err(e) => err(e),
+        },
+        "ai.cancel" => {
+            crate::ai_service::cancel(app);
+            ok(json!({"cancelled":true}))
+        }
+        "ai.status" => ok(
+            json!({"enabled":app.ui.ai.enabled,"visible":app.ui.ai.visible,"settingsVisible":crate::panel_docking::ai_settings_shown(app),"running":app.ai_runtime.running(),"status":app.ui.ai.status,"optimizedPrompt":app.ai_runtime.optimized_prompt,"savedImages":app.ai_runtime.saved_images}),
+        ),
+        "ai.configure" => {
+            let result = (|| -> Result<(), String> {
+                let obj = p.as_object().ok_or("params must be an object")?;
+                let mut settings = app.ui.ai.clone();
+                for (key, value) in obj {
+                    if key == "enabled" {
+                        settings.enabled = value.as_bool().ok_or("enabled must be boolean")?;
+                        continue;
+                    }
+                    if key == "visible" {
+                        settings.visible = value.as_bool().ok_or("visible must be boolean")?;
+                        continue;
+                    }
+                    if key == "batchComponents" {
+                        settings.batch_components = value.as_bool().ok_or("batchComponents must be boolean")?;
+                        continue;
+                    }
+                    if key == "expandComponent" {
+                        settings.expand_component = value.as_bool().ok_or("expandComponent must be boolean")?;
+                        continue;
+                    }
+                    if key == "designFirst" {
+                        settings.design_first = value.as_bool().ok_or("designFirst must be boolean")?;
+                        continue;
+                    }
+                    if key == "reference" {
+                        settings.reference = value.as_bool().ok_or("reference must be boolean")?;
+                        continue;
+                    }
+                    let text = value.as_str().filter(|v| v.len() <= 4096).ok_or("settings must be strings of at most 4096 bytes")?;
+                    match key.as_str() {
+                        "provider" if ["codex", "images-api"].contains(&text) => settings.provider = text.into(),
+                        "baseUrl" => settings.base_url = text.into(),
+                        "model" => settings.model = text.into(),
+                        "codexPath" => settings.codex_path = text.into(),
+                        "codexModel" => settings.codex_model = text.into(),
+                        "codexReasoningEffort" => settings.codex_reasoning_effort = text.into(),
+                        "componentButtons" => settings.component_buttons = text.into(),
+                        "componentBars" => settings.component_bars = text.into(),
+                        "mode" => settings.mode = serde_json::from_value(value.clone()).map_err(|_| "mode must be repaint or component")?,
+                        "prompt" => settings.prompt = text.into(),
+                        _ => return Err(format!("unsupported AI setting: {key}")),
+                    }
+                }
+                if settings.base_url != app.ui.ai.base_url {
+                    app.ai_runtime.api_key.clear();
+                }
+                app.ui.ai = settings;
+                crate::ai_service::normalize_reasoning(app);
+                Ok(())
+            })();
+            match result {
+                Ok(()) => ok(json!({"configured":true})),
+                Err(e) => err(e),
+            }
+        }
         "ui.context.choose" => {
             let Some(id) = s("id") else { return err("missing `id`") };
             let Some(menu) = app.ui.canvas_tool_menu.as_ref() else { return err("no canvas context menu is open") };

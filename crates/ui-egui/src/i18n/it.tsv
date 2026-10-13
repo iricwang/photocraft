@@ -2719,3 +2719,75 @@ curves	Smooth	Leviga
 	Light Red	Rosso chiaro
 	Medium Blue	Blu medio
 	Light Gray	Grigio chiaro
+# Native AI candidate review
+	AI Studio	Studio IA
+	Close AI Studio	Chiudi studio IA
+	Local Test Provider	Generatore di prova locale
+	Prompt	Istruzione
+	Create Test Candidate	Crea proposta di prova
+	Candidate	Proposta
+	Document changed	Documento modificato
+	Candidate ready	Proposta pronta
+	Candidate applied	Proposta applicata
+	Candidate discarded	Proposta scartata
+# Native AI candidate action
+	Discard	Scarta
+# Native image generation
+	Provider	Fornitore
+	Connection settings	Impostazioni connessione
+	Base URL	URL di base
+	API key (session only)	Chiave API (solo sessione)
+	Codex executable (optional)	Eseguibile Codex (facoltativo)
+	Codex model (automatic if empty)	Modello Codex (vuoto = automatico)
+	Use current layer as reference	Usa il livello corrente come riferimento
+	Generate image	Genera immagine
+	Generating image...	Generazione immagine...
+	Generation cancelled	Generazione annullata
+	Refresh models	Aggiorna modelli
+	Optimizing prompt...	Ottimizzazione del prompt...
+	Optimized prompt	Prompt ottimizzato
+	Hidden	Nascosto
+	Generation history	Cronologia generazioni
+	Generate again	Genera di nuovo
+	New generation	Nuova generazione
+	Remove generation record	Rimuovi record di generazione
+	Generation mode	Modalità di generazione
+	In-place edit	Modifica locale
+	Transparent component	Elemento trasparente
+	Generation settings	Impostazioni di generazione
+	Describe your edit	Descrivi la modifica
+	Component set (1 image)	Set di componenti (1 immagine)
+	Player preset	Preimpostazione lettore
+	Buttons	Pulsanti
+	Tracks	Cursori
+	Generating asset set...	Generazione degli elementi...
+	Arranging asset layers...	Disposizione dei livelli...
+	Reference images	Immagini di riferimento
+	Choose reference image	Scegli immagine di riferimento
+	Paste reference image	Incolla immagine di riferimento
+	Remove reference image	Rimuovi immagine di riferimento
+	No image on the clipboard	Nessuna immagine negli appunti
+	Clipboard image	Immagine dagli appunti
+	Preparing reference image...	Preparazione dell’immagine di riferimento...
+	Linking Codex project...	Collegamento al progetto Codex...
+	Wait for the current operation to finish	Attendi il completamento dell’operazione corrente
+	Up to 4 reference images	Fino a 4 immagini di riferimento
+	Reference image exceeds 32 MB	L’immagine di riferimento supera 32 MB
+	Reasoning effort	Livello di ragionamento
+	Minimal	Minimo
+	Low	Basso
+	High	Alto
+	Extra high	Molto alto
+	Ultra	Ultra
+	Model settings	Impostazioni del modello
+	Hide model settings	Nascondi impostazioni del modello
+	Show/Hide Model Settings	Mostra/nascondi impostazioni del modello
+	Collapse AI Studio	Comprimi Studio IA
+	Show AI Studio	Mostra Studio IA
+	Enable AI	Attiva IA
+	Enable AI to generate images	Attiva l’IA per generare immagini
+	AI disabled	IA disattivata
+	Generation details	Dettagli della generazione
+	Generating	Generazione in corso
+	Ready	Pronto
+	New document	Nuovo documento

@@ -19,6 +19,11 @@ pub mod adjust_dialog;
 pub mod adjust_editors;
 pub mod adjust_preview;
 pub mod adjust_ui;
+pub mod ai_panel;
+mod ai_project;
+mod ai_references;
+pub mod ai_service;
+mod ai_settings;
 mod alt_grab;
 pub mod analysis_ui;
 pub mod anchor_tools;
@@ -362,6 +367,12 @@ pub type WindowFrameFn = Box<dyn FnMut()>;
 /// I/O dependencies.
 #[derive(Default)]
 pub struct Services {
+    pub project_sync: Option<ai_service::ProjectSyncFn>,
+    pub project_sync_status: Option<Box<dyn FnMut() -> Result<(), String>>>,
+    pub ai_generate: Option<ai_service::GenerateFn>,
+    pub ai_models: Option<ai_service::ModelsFn>,
+    pub load_ai_settings: Option<LoadTextFn>,
+    pub save_ai_settings: Option<SaveTextFn>,
     /// User-initiated desktop/browser pixel sampling.
     pub screen_pick: Option<screen_picker::Service>,
     /// Decode a file's bytes into a document (PSD, PNG, JPEG, …).
@@ -687,6 +698,7 @@ pub struct PhotocraftApp {
     pub background_jobs: bool,
     /// Background job bookkeeping: opening tabs, control replies waiting on a job.
     pub jobs: jobs_ui::JobsUi,
+    pub ai_runtime: ai_service::Runtime,
     #[cfg(all(debug_assertions, not(target_arch = "wasm32")))]
     live_tokens: theme::live::LiveTokens,
 }
@@ -803,11 +815,13 @@ impl PhotocraftApp {
             stylus: Default::default(),
             background_jobs: false,
             jobs: Default::default(),
+            ai_runtime: Default::default(),
             #[cfg(all(debug_assertions, not(target_arch = "wasm32")))]
             live_tokens: theme::live::LiveTokens::from_env(),
         };
         // Saved preferences are in place before the first frame; recovery starts in upkeep.
         prefs_ui::load(&mut app);
+        ai_service::load_settings(&mut app);
         // After the saved preferences, which say whether the set was already offered.
         kys_import::offer_import(&mut app);
         notices::wayland_file_drop_guidance(&mut app);
@@ -1549,6 +1563,7 @@ impl eframe::App for PhotocraftApp {
         // A window bigger than its display (1440 × 900 on 1366 × 768) runs under the taskbar:
         // maximize it into the work area once (#315).
         work_area::fit_window(ctx);
+        ai_service::tick(self, ctx);
         discard_ui::guard_window_close(self, ctx);
         // Background jobs: apply finished ones, keep frames coming, Esc cancels (before the
         // shortcuts see Esc).
@@ -1596,6 +1611,7 @@ impl eframe::App for PhotocraftApp {
         if let Some(menu) = self.services.native_menu.as_mut() {
             menu.raw_input(raw_input);
         }
+        ai_references::paste_input(self, ctx, raw_input);
         shortcuts::clipboard_keys(ctx, ctx.text_edit_focused() || self.ui.text_edit.is_some(), raw_input);
         // Windows sends a touchpad pinch as Ctrl + wheel; make it a pinch again (wheel_nav.rs) —
         // unless the pinch preference is off, leaving those fractions to scroll sideways.
@@ -1672,6 +1688,9 @@ impl eframe::App for PhotocraftApp {
         egui::CentralPanel::default().frame(egui::Frame::NONE.fill(backdrop)).show(ui, |ui| {
             canvas::document_area(self, ui);
         });
+        if chrome {
+            ai_panel::show(self, ui);
+        }
         panels::properties_window(self, &ctx);
         brush_panel::window(self, &ctx);
         preset_panels::windows(self, &ctx);

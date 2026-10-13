@@ -579,6 +579,8 @@ fn doc_pixels_equal(a: &Document, b: &Document) -> bool {
         guides: _,
         selection: _,
         metadata: _,
+        ai_generations: _,
+        ai_project: _,
         global_light,
         paths: _,
         work_path: _,

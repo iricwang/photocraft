@@ -1,0 +1,15 @@
+[
+  ["engine.execute", {"command": "file.new", "params": {"width": 512, "height": 384, "name": "AI candidate demo"}}],
+  ["engine.execute", {"command": "layer.new.layer", "params": {"name": "Target"}}],
+  ["engine.execute", {"command": "edit.fill", "params": {"contents": "color", "color": "#527b66"}}],
+  ["engine.execute", {"command": "select.rect", "params": {"x": 80, "y": 70, "width": 350, "height": 230}}],
+  ["engine.execute", {"command": "edit.fill", "params": {"contents": "color", "color": "#ededed"}}],
+  ["engine.execute", {"command": "select.rect", "params": {"x": 110, "y": 100, "width": 140, "height": 140}}],
+  ["engine.execute", {"command": "edit.fill", "params": {"contents": "color", "color": "#e2bd45"}}],
+  ["engine.execute", {"command": "select.rect", "params": {"x": 300, "y": 150, "width": 90, "height": 90}}],
+  ["engine.execute", {"command": "edit.fill", "params": {"contents": "color", "color": "#b24654"}}],
+  ["engine.execute", {"command": "select.rect", "params": {"x": 140, "y": 130, "width": 100, "height": 80}}],
+  ["engine.execute", {"command": "tools.setColors", "params": {"foreground": "#3977c4"}}],
+  ["ui.menu.invoke", {"id": "window.ai", "params": {"show": true}}],
+  ["engine.execute", {"command": "ai.prepareTestCandidate", "params": {"prompt": "Local transaction test"}}]
+]

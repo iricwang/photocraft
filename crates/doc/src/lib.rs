@@ -10,6 +10,7 @@
 
 pub mod adjust;
 pub mod advanced;
+pub mod ai;
 pub mod analysis;
 pub mod blend_if;
 pub mod comps;
@@ -835,6 +836,10 @@ pub struct Document {
     /// Active selection as a grayscale coverage surface (None = no selection).
     pub selection: Option<Surface>,
     pub metadata: Metadata,
+    /// Generation families and immutable retry inputs; native project only.
+    pub ai_generations: Vec<ai::GenerationGroup>,
+    /// Embedded reference images and portable AI conversation/operation memory.
+    pub ai_project: ai::ProjectMemory,
     /// Global light used by layer effects (PSD resources 1037/1049).
     pub global_light: GlobalLight,
     /// Saved paths (Paths panel), top to bottom.
@@ -895,6 +900,8 @@ impl Document {
             guides: Guides::default(),
             selection: None,
             metadata: Metadata::default(),
+            ai_generations: Vec::new(),
+            ai_project: ai::ProjectMemory::default(),
             global_light: GlobalLight::default(),
             paths: Vec::new(),
             work_path: None,

@@ -3035,3 +3035,73 @@ curves	Smooth	Haluskan
 	Light Red	Merah Terang
 	Medium Blue	Biru Sedang
 	Light Gray	Abu-abu Muda
+# Native AI candidate review
+	AI Studio	Studio AI
+	Close AI Studio	Tutup Studio AI
+	Local Test Provider	Generator Uji Lokal
+	Prompt	Instruksi
+	Create Test Candidate	Buat Kandidat Uji
+	Candidate	Kandidat
+	Document changed	Dokumen berubah
+	Candidate ready	Kandidat siap
+	Candidate applied	Kandidat diterapkan
+	Candidate discarded	Kandidat dibuang
+# Native AI candidate action
+	Discard	Buang
+# Native image generation
+	Provider	Penyedia
+	Connection settings	Pengaturan koneksi
+	Base URL	URL dasar
+	API key (session only)	Kunci API (sesi ini saja)
+	Codex executable (optional)	Program Codex (opsional)
+	Codex model (automatic if empty)	Model Codex (kosong = otomatis)
+	Use current layer as reference	Gunakan lapisan aktif sebagai referensi
+	Generate image	Buat gambar
+	Generating image...	Membuat gambar...
+	Generation cancelled	Pembuatan dibatalkan
+	Refresh models	Segarkan model
+	Optimizing prompt...	Mengoptimalkan prompt...
+	Optimized prompt	Prompt yang dioptimalkan
+	Hidden	Tersembunyi
+	Generation history	Riwayat pembuatan
+	Generate again	Buat lagi
+	New generation	Pembuatan baru
+	Remove generation record	Hapus catatan pembuatan
+	Generation mode	Mode pembuatan
+	In-place edit	Edit di tempat
+	Transparent component	Komponen transparan
+	Generation settings	Pengaturan pembuatan
+	Describe your edit	Jelaskan perubahan
+	Component set (1 image)	Set komponen (1 gambar)
+	Player preset	Prasetel pemutar
+	Buttons	Tombol
+	Tracks	Penggeser
+	Generating asset set...	Membuat kumpulan aset...
+	Arranging asset layers...	Menata lapisan aset...
+	Reference images	Gambar referensi
+	Choose reference image	Pilih gambar referensi
+	Paste reference image	Tempel gambar referensi
+	Remove reference image	Hapus gambar referensi
+	No image on the clipboard	Tidak ada gambar di papan klip
+	Clipboard image	Gambar papan klip
+	Preparing reference image...	Menyiapkan gambar referensi...
+	Linking Codex project...	Menghubungkan proyek Codex...
+	Wait for the current operation to finish	Tunggu hingga operasi saat ini selesai
+	Up to 4 reference images	Maksimal 4 gambar referensi
+	Reference image exceeds 32 MB	Gambar referensi melebihi 32 MB
+	Reasoning effort	Tingkat penalaran
+	Minimal	Minimal
+	Extra high	Sangat tinggi
+	Ultra	Ultra
+	Model settings	Pengaturan model
+	Hide model settings	Sembunyikan pengaturan model
+	Show/Hide Model Settings	Tampilkan/sembunyikan pengaturan model
+	Collapse AI Studio	Ciutkan Studio AI
+	Show AI Studio	Tampilkan Studio AI
+	Enable AI	Aktifkan AI
+	Enable AI to generate images	Aktifkan AI untuk membuat gambar
+	AI disabled	AI dinonaktifkan
+	Generation details	Detail pembuatan
+	Generating	Sedang membuat
+	Ready	Siap
+	New document	Dokumen baru

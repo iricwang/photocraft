@@ -26,6 +26,8 @@ mod appearance;
 #[cfg(target_os = "macos")]
 mod apple_events;
 mod caps_lock;
+mod codex_desktop;
+mod codex_shared;
 mod control_server;
 mod crash_guard;
 mod cursor;
@@ -36,11 +38,14 @@ mod mac_menu;
 #[cfg(target_os = "macos")]
 mod mac_window;
 // Pure logic is tested on every platform; only Linux runs the check.
+mod ai_asset_agent;
+mod ai_generation;
 #[cfg(any(target_os = "linux", test))]
 mod linux_libs;
 mod logging;
 mod monitor_profile;
 mod photoshop_settings;
+mod project_memory;
 mod screen_color;
 mod services;
 // Windows gets pen pressure from winit (WM_POINTER); the web runner has its own listener.
@@ -152,6 +157,55 @@ mod control_port_tests {
 }
 
 fn main() -> eframe::Result {
+    if std::env::args_os().nth(1).as_deref() == Some(std::ffi::OsStr::new("--prepare-codex-bridge")) {
+        match codex_shared::bootstrap() {
+            Ok(count) => {
+                println!("Registered {count} existing design conversations");
+                return Ok(());
+            }
+            Err(error) => {
+                eprintln!("PhotoCraft connection setup: {error}");
+                std::process::exit(1);
+            }
+        }
+    }
+    if std::env::args_os().nth(1).as_deref() == Some(std::ffi::OsStr::new("--ai-canvas-mcp")) {
+        let result = (|| -> Result<(), String> {
+            use std::io::Read;
+            let path = std::env::args_os().nth(2).ok_or("Missing canvas snapshot")?;
+            let file = std::fs::File::open(path).map_err(|e| e.to_string())?;
+            let mut bytes = Vec::new();
+            file.take(48 * 1024 * 1024 + 1).read_to_end(&mut bytes).map_err(|e| e.to_string())?;
+            if bytes.len() > 48 * 1024 * 1024 {
+                return Err("Canvas snapshot exceeds 48 MiB".into());
+            }
+            let snapshot: photocraft_ui_egui::ai_service::CanvasSnapshot = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+            tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .map_err(|e| e.to_string())?
+                .block_on(photocraft_automation::canvas_mcp::serve(snapshot.image_base64, snapshot.document))
+        })();
+        if let Err(error) = result {
+            eprintln!("PhotoCraft canvas MCP: {error}");
+        }
+        return Ok(());
+    }
+    if std::env::args_os().nth(1).as_deref() == Some(std::ffi::OsStr::new("--ai-asset-mcp")) {
+        let result = (|| -> Result<(), String> {
+            let addr = std::env::args_os().nth(2).and_then(|s| s.into_string().ok()).ok_or("Missing asset bridge address")?;
+            let token = std::env::var("PHOTOCRAFT_ASSET_TOKEN").map_err(|_| "Missing asset task token")?;
+            tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .map_err(|e| e.to_string())?
+                .block_on(photocraft_automation::asset_mcp::serve(addr, token))
+        })();
+        if let Err(error) = result {
+            eprintln!("PhotoCraft asset MCP: {error}");
+        }
+        return Ok(());
+    }
     // First, so the panic hook and every start-up warning are recorded (`logging`).
     let logger = logging::install();
     crash_guard::install_hook();

@@ -3048,3 +3048,73 @@ curves	Smooth	Lisser
 	Light Red	Rouge clair
 	Medium Blue	Bleu moyen
 	Light Gray	Gris clair
+# Native AI candidate review
+	AI Studio	Studio IA
+	Close AI Studio	Fermer le studio IA
+	Local Test Provider	Générateur de test local
+	Prompt	Consigne
+	Create Test Candidate	Créer une proposition de test
+	Candidate	Proposition
+	Document changed	Document modifié
+	Candidate ready	Proposition prête
+	Candidate applied	Proposition appliquée
+	Candidate discarded	Proposition abandonnée
+# Native AI candidate action
+	Discard	Abandonner
+# Native image generation
+	Provider	Fournisseur
+	Connection settings	Paramètres de connexion
+	Base URL	URL de base
+	API key (session only)	Clé API (session uniquement)
+	Codex executable (optional)	Exécutable Codex (facultatif)
+	Codex model (automatic if empty)	Modèle Codex (vide = automatique)
+	Use current layer as reference	Utiliser le calque actuel comme référence
+	Generate image	Générer une image
+	Generating image...	Génération de l’image...
+	Generation cancelled	Génération annulée
+	Refresh models	Actualiser les modèles
+	Optimizing prompt...	Optimisation de la consigne...
+	Optimized prompt	Consigne optimisée
+	Hidden	Masqué
+	Generation history	Historique de génération
+	Generate again	Générer à nouveau
+	New generation	Nouvelle génération
+	Remove generation record	Supprimer la fiche de génération
+	Generation mode	Mode de génération
+	In-place edit	Retouche locale
+	Transparent component	Élément transparent
+	Generation settings	Paramètres de génération
+	Describe your edit	Décrivez la modification
+	Component set (1 image)	Jeu de composants (1 image)
+	Player preset	Préréglage du lecteur
+	Buttons	Boutons
+	Tracks	Curseurs
+	Generating asset set...	Génération des éléments...
+	Arranging asset layers...	Disposition des calques...
+	Reference images	Images de référence
+	Choose reference image	Choisir une image de référence
+	Paste reference image	Coller une image de référence
+	Remove reference image	Retirer l’image de référence
+	No image on the clipboard	Aucune image dans le presse-papiers
+	Clipboard image	Image du presse-papiers
+	Preparing reference image...	Préparation de l’image de référence...
+	Linking Codex project...	Association du projet Codex...
+	Wait for the current operation to finish	Attendez la fin de l’opération en cours
+	Up to 4 reference images	Jusqu’à 4 images de référence
+	Reference image exceeds 32 MB	L’image de référence dépasse 32 Mo
+	Reasoning effort	Niveau de raisonnement
+	Minimal	Minimal
+	Extra high	Très élevé
+	Ultra	Ultra
+	Model settings	Paramètres du modèle
+	Hide model settings	Masquer les paramètres du modèle
+	Show/Hide Model Settings	Afficher/masquer les paramètres du modèle
+	Collapse AI Studio	Réduire le Studio IA
+	Show AI Studio	Afficher le Studio IA
+	Enable AI	Activer l’IA
+	Enable AI to generate images	Activez l’IA pour générer des images
+	AI disabled	IA désactivée
+	Generation details	Détails de génération
+	Generating	Génération en cours
+	Ready	Prêt
+	New document	Nouveau document

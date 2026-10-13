@@ -211,6 +211,9 @@ fn keeps_floating(id: &str) -> bool {
 /// Before any command (`Session::dispatch`): Undo puts a floating piece back (and is used up:
 /// returns its result); every other command but the floating ones drops it first.
 pub(crate) fn before_command(s: &mut Session, id: &str) -> Result<Option<Value>> {
+    if id.starts_with("ai.") {
+        return Ok(None);
+    }
     let Some(st) = s.active_mut() else { return Ok(None) };
     if floating(st).is_none() {
         st.floating = None;

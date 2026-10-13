@@ -14,6 +14,7 @@ const PANELS: &[(&str, &str, Group)] = &[
     ("patterns", "Patterns", Group::Color),
     ("properties", "Properties", Group::Properties),
     ("adjustments", "Adjustments", Group::Properties),
+    ("aiSettings", "Model settings", Group::AiSettings),
     ("character", "Character", Group::Character),
     ("paragraph", "Paragraph", Group::Character),
     ("navigator", "Navigator", Group::Navigator),
@@ -76,12 +77,17 @@ fn legacy_layout(app: &PhotocraftApp, all: bool) -> Layout<String> {
         let selected = match group {
             Group::Color => app.ui.dock_tabs.color,
             Group::Properties => app.ui.dock_tabs.properties,
+            Group::AiSettings => app.ui.dock_tabs.ai_settings,
             Group::Character => app.ui.dock_tabs.character,
             Group::Navigator => app.ui.dock_tabs.navigator,
             Group::History => app.ui.dock_tabs.history,
             Group::Layers => app.ui.dock_tabs.layers,
         };
         let active = labels.get(selected).and_then(|label| normalize(label)).and_then(|id| panels.iter().position(|p| p == id)).unwrap_or(0);
+        if group == Group::AiSettings {
+            layout.floating.push(Floating { panels, active, rect: [400.0, 140.0, 288.0, 220.0] });
+            continue;
+        }
         if group == Group::Properties && !pro {
             layout.floating.push(Floating { panels, active, rect: [120.0, 160.0, 320.0, 440.0] });
             continue;
@@ -162,6 +168,16 @@ fn placement(params: &Value) -> Result<Placement<String>, String> {
 }
 
 pub(crate) fn command(app: &mut PhotocraftApp, id: &str, params: &Value) -> Option<Result<Value, String>> {
+    if matches!(id, "window.panel.aiSettings" | "window.toggle.aiSettings") {
+        let show = match params.get("show").or_else(|| params.get("on")) {
+            Some(value) => match value.as_bool() {
+                Some(show) => show,
+                None => return Some(Err("show must be a boolean".into())),
+            },
+            None => !ai_settings_shown(app),
+        };
+        return Some(set_ai_settings_visible(app, show));
+    }
     if id == "window.panel.group" {
         return Some(group_command(app, params));
     }
@@ -200,6 +216,9 @@ pub(crate) fn command(app: &mut PhotocraftApp, id: &str, params: &Value) -> Opti
 }
 
 pub(crate) fn checked(app: &PhotocraftApp, id: &str) -> Option<bool> {
+    if matches!(id, "window.panel.aiSettings" | "window.toggle.aiSettings") {
+        return Some(ai_settings_shown(app));
+    }
     let layout = app.ui.docking.as_ref()?;
     let panel = id.strip_prefix("window.panel.").or_else(|| id.strip_prefix("window.toggle.")).and_then(normalize)?;
     Some(layout.contains(&panel.to_string()))
@@ -275,6 +294,13 @@ fn change(app: &mut PhotocraftApp, operation: &str, params: &Value) -> Result<Va
         return Err("workspace is locked".into());
     }
     let panel = params.get("panel").and_then(Value::as_str).and_then(normalize).ok_or("panel must name a registered panel")?;
+    if panel == "aiSettings"
+        && operation == "activate"
+        && !app.ui.docking.as_ref().is_some_and(|layout| layout.contains(&panel.to_owned()))
+        && !app.ui.docking_hidden.contains_key(panel)
+    {
+        return set_ai_settings_visible(app, true);
+    }
     if app.ui.docking.as_ref().is_some_and(|layout| !valid(layout)) {
         return Err("saved panel layout is invalid; reset the workspace first".into());
     }
@@ -505,15 +531,19 @@ pub(crate) fn legacy_tab(app: &mut PhotocraftApp, ui: &mut egui::Ui, panel: &str
     let strip = egui::Rect::from_min_max(egui::pos2(ui.max_rect().left(), response.rect.top()), egui::pos2(ui.max_rect().right(), response.rect.bottom()));
     if response.dragged()
         && ui.input(|input| input.focused && input.pointer.primary_down() && !input.key_pressed(egui::Key::Escape))
-        && ui.ctx().pointer_interact_pos().is_some_and(|position| position.x < strip.left() - 24.0 || position.x > strip.right() + 24.0)
+        && (panel == "aiSettings"
+            || ui.ctx().pointer_interact_pos().is_some_and(|position| position.x < strip.left() - 24.0 || position.x > strip.right() + 24.0))
         && let Some(id) = normalize(panel)
     {
         let mut layout = app.ui.docking.clone().unwrap_or_else(|| legacy(app));
-        let bounds = ui.max_rect();
+        let bounds = if id == "aiSettings" { ui.min_rect() } else { ui.max_rect() };
         let source = egui::Rect::from_min_size(
             egui::pos2(bounds.left(), response.rect.top()),
             egui::vec2(bounds.width().clamp(240.0, 600.0), bounds.height().clamp(200.0, 600.0)),
         );
+        if id == "aiSettings" && !layout.contains(&id.to_string()) {
+            layout.floating.push(Floating { panels: vec![id.to_string()], active: 0, rect: [source.left(), source.top(), source.width(), source.height()] });
+        }
         if ensure(&mut layout, id).is_ok() && craft_ui::docking::begin_drag(ui.ctx(), egui::Id::new("photocraft-panel-docking"), id.to_string(), source) {
             ui.ctx().data_mut(|data| {
                 data.insert_temp(
@@ -564,6 +594,9 @@ fn migration_hidden(app: &PhotocraftApp, visible: &Layout<String>) -> std::colle
     let full = legacy_layout(app, true);
     PANELS
         .iter()
+        // Until dragged, model settings belongs to its independent rail flyout. Do not
+        // migrate a closed flyout into a hidden main-column tab on unrelated panel moves.
+        .filter(|(id, _, _)| *id != "aiSettings")
         .filter(|(id, _, _)| !visible.contains(&id.to_string()))
         .filter_map(|(id, _, _)| full.location(&id.to_string()).ok().map(|at| ((*id).to_owned(), at)))
         .collect()
@@ -592,6 +625,39 @@ fn reveal_group(app: &mut PhotocraftApp, panel: &str) {
             }
         }
     }
+}
+
+/// Model settings visibility is separate from both AI enablement and the prompt composer.
+/// Before the user drags it, it opens as a compact flyout beside the icon rail.
+pub(crate) fn ai_settings_shown(app: &PhotocraftApp) -> bool {
+    if let Some(layout) = &app.ui.docking
+        && layout.contains(&"aiSettings".to_owned())
+    {
+        return panel_active(layout, "aiSettings") && !collapsed_members(app, layout).contains("aiSettings");
+    }
+    app.ui.panels.ai_settings
+}
+
+pub(crate) fn set_ai_settings_visible(app: &mut PhotocraftApp, show: bool) -> Result<Value, String> {
+    let customized = app.ui.docking.as_ref().is_some_and(|layout| layout.contains(&"aiSettings".to_owned()));
+    if customized || app.ui.docking_hidden.contains_key("aiSettings") {
+        if show {
+            return change(app, "activate", &json!({"panel":"aiSettings"}));
+        }
+        if customized {
+            return change(app, "close", &json!({"panel":"aiSettings"}));
+        }
+    }
+    app.ui.panels.ai_settings = show;
+    if show {
+        app.ui.panels.dock = true;
+        crate::dock::reveal(app, Group::AiSettings);
+    }
+    Ok(json!({"show":show}))
+}
+
+pub(crate) fn toggle_ai_settings(app: &mut PhotocraftApp) -> Result<Value, String> {
+    set_ai_settings_visible(app, !ai_settings_shown(app))
 }
 
 pub(crate) fn rail_on(app: &PhotocraftApp, group: Group) -> bool {
@@ -786,6 +852,7 @@ pub(crate) fn prepare_legacy_update(
             let index = match group {
                 Group::Color => tabs.color,
                 Group::Properties => tabs.properties,
+                Group::AiSettings => tabs.ai_settings,
                 Group::Character => tabs.character,
                 Group::Navigator => tabs.navigator,
                 Group::History => tabs.history,
@@ -923,6 +990,9 @@ pub(crate) fn sync_visibility(app: &mut PhotocraftApp) {
         }
         let pro = matches!(app.ui.theme, crate::theme::ThemeKind::Pro | crate::theme::ThemeKind::ProMedium);
         for group in Group::ALL {
+            if group == Group::AiSettings && !layout.contains(&"aiSettings".to_owned()) && !app.ui.docking_hidden.contains_key("aiSettings") {
+                continue;
+            }
             *group.shown_mut(&mut app.ui.panels) = PANELS.iter().filter(|p| p.2 == group).any(|p| layout.contains(&p.0.to_owned()));
             for (index, label) in group.tabs(pro).iter().enumerate() {
                 if let Some(id) = normalize(label) {

@@ -3657,3 +3657,72 @@ curves	Smooth	スムーズ
 	Light Red	ライトレッド
 	Medium Blue	ミディアムブルー
 	Light Gray	ライトグレー
+# Native AI candidate review
+	AI Studio	AIスタジオ
+	Close AI Studio	AIスタジオを閉じる
+	Local Test Provider	ローカルテスト生成器
+	Prompt	プロンプト
+	Create Test Candidate	テスト候補を生成
+	Candidate	候補
+	Document changed	ドキュメントが変更されました
+	Candidate ready	候補の準備完了
+	Candidate applied	候補を適用しました
+	Candidate discarded	候補を破棄しました
+# Native AI candidate action
+	Discard	破棄
+# Native image generation
+	Provider	プロバイダー
+	Connection settings	接続設定
+	Base URL	ベース URL
+	API key (session only)	API キー（現在のセッションのみ）
+	Codex executable (optional)	Codex 実行ファイル（任意）
+	Codex model (automatic if empty)	Codex モデル（空欄で自動選択）
+	Use current layer as reference	現在のレイヤーを参照画像に使用
+	Generate image	画像を生成
+	Generating image...	画像を生成中...
+	Generation cancelled	生成をキャンセルしました
+	Refresh models	モデルを更新
+	Optimizing prompt...	プロンプトを最適化中...
+	Optimized prompt	最適化したプロンプト
+	Hidden	非表示
+	Generation history	生成履歴
+	Generate again	別のバージョンを生成
+	New generation	新規生成
+	Remove generation record	生成記録を削除
+	Generation mode	生成モード
+	In-place edit	部分編集
+	Transparent component	透明パーツ
+	Generation settings	生成設定
+	Describe your edit	変更内容を入力
+	Component set (1 image)	コンポーネントセット（画像1枚）
+	Player preset	プレーヤープリセット
+	Buttons	ボタン
+	Tracks	スライダー
+	Generating asset set...	素材セットを生成中...
+	Arranging asset layers...	素材レイヤーを配置中...
+	Reference images	参考画像
+	Choose reference image	参考画像を選択
+	Paste reference image	参考画像を貼り付け
+	Remove reference image	参考画像を削除
+	No image on the clipboard	クリップボードに画像がありません
+	Clipboard image	クリップボードの画像
+	Preparing reference image...	参考画像を準備中...
+	Linking Codex project...	Codex プロジェクトを関連付け中...
+	Wait for the current operation to finish	現在の操作が完了するまでお待ちください
+	Up to 4 reference images	参考画像は最大4枚です
+	Reference image exceeds 32 MB	参考画像が32 MBを超えています
+	Reasoning effort	思考レベル
+	Minimal	最小
+	Extra high	非常に高い
+	Ultra	最高
+	Model settings	モデル設定
+	Hide model settings	モデル設定を隠す
+	Show/Hide Model Settings	モデル設定を表示／非表示
+	Collapse AI Studio	AIスタジオを折りたたむ
+	Show AI Studio	AIスタジオを表示
+	Enable AI	AIを有効にする
+	Enable AI to generate images	画像を生成するにはAIを有効にしてください
+	AI disabled	AIは無効です
+	Generation details	生成の詳細
+	Generating	生成中
+	Ready	準備完了
