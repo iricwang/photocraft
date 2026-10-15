@@ -13,10 +13,17 @@ import time
 
 from probe_shared_codex import MockResponses, FIXTURE
 
+TURN_POLICY = "Current PhotoCraft workflow: read photocraft_canvas.canvas_snapshot before editing existing artwork; skip for unrelated reference-only assets. Keep the user's request unchanged."
+
+
+def developer_text(request):
+    return "\n".join(part.get("text", "") for item in request["input"] if item.get("role") == "developer" for part in item.get("content", []))
+
 
 class CanvasResponses(MockResponses):
     def output_item(self, request):
         if len(self.requests) == 2:
+            assert TURN_POLICY in developer_text(request), "Current policy never reached model-visible developer instructions"
             namespace = next(t for t in request["tools"] if t.get("name") == "mcp__photocraft_canvas")
             assert any(t.get("name") == "canvas_snapshot" for t in namespace["tools"])
             assert "before generating or asking the user for a screenshot" in namespace["description"]
@@ -134,6 +141,7 @@ def main():
                 desktop = launch(command)
                 desktop.initialize("photocraft-probe-desktop")
                 created = desktop.call("thread/start", {"cwd": str(workspace), "ephemeral": False, "modelProvider": "probe", "model": "probe-model-a",
+                                                       "developerInstructions": "Legacy workflow: images arrive as user attachments.",
                                                        "approvalPolicy": "never", "sandbox": "read-only", "config": {"features.shell_tool": False, "mcp_servers": {}}})
                 assert created.get("result", {}).get("modelProvider") == "probe", created
                 thread = created["result"]["thread"]["id"]
@@ -167,7 +175,12 @@ def main():
                 assert second.get("result", {}).get("thread", {}).get("id") == thread, second
                 MockResponses.hold.clear()
                 MockResponses.entered.clear()
-                active = photo.call("turn/start", {"threadId": thread, "model": "probe-model-b", "input": [{"type": "text", "text": "Local mock: next design."}]})
+                injected = photo.call("thread/inject_items", {"threadId": thread, "items": [
+                    {"type": "message", "role": "developer", "content": [{"type": "input_text", "text": TURN_POLICY}]}]})
+                assert "result" in injected, injected
+                active = photo.call("turn/start", {"threadId": thread, "model": "probe-model-b",
+                    "collaborationMode": {"mode": "default", "settings": {"model": "probe-model-b", "reasoning_effort": "high", "developer_instructions": TURN_POLICY}},
+                    "input": [{"type": "text", "text": "Local mock: next design."}]})
                 assert "result" in active, active
                 assert MockResponses.entered.wait(15), "Mock provider did not receive turn"
                 busy = desktop.call("turn/start", {"threadId": thread, "input": [{"type": "text", "text": "Must not steer the active design."}]})
@@ -178,18 +191,27 @@ def main():
                 MockResponses.hold.set()
                 photo.complete(active["result"]["turn"]["id"])
                 desktop.call("thread/read", {"threadId": thread, "includeTurns": True})
-                again = photo.call("turn/start", {"threadId": thread, "model": "probe-model-c", "input": [{"type": "text", "text": "Local mock: continue same design."}]})
+                updated_policy = TURN_POLICY + " Latest workflow revision: keep source and reference roles separate."
+                injected = photo.call("thread/inject_items", {"threadId": thread, "items": [
+                    {"type": "message", "role": "developer", "content": [{"type": "input_text", "text": updated_policy}]}]})
+                assert "result" in injected, injected
+                again = photo.call("turn/start", {"threadId": thread, "model": "probe-model-c",
+                    "collaborationMode": {"mode": "default", "settings": {"model": "probe-model-c", "reasoning_effort": "high", "developer_instructions": updated_policy}},
+                    "input": [{"type": "text", "text": "Local mock: continue same design."}]})
                 assert "result" in again, again
                 photo.complete(again["result"]["turn"]["id"])
                 assert len(MockResponses.requests) == 4, len(MockResponses.requests)
                 assert not has_canvas_image(MockResponses.requests[1]["input"]), "Canvas was attached before the tool call"
                 assert has_canvas_image(MockResponses.requests[2]["input"]), "Tool image did not reach the model"
+                assert TURN_POLICY in developer_text(MockResponses.requests[2]), "Policy missing after tool result"
+                assert MockResponses.requests[1].get("reasoning", {}).get("effort") == "high"
                 assert MockResponses.requests[-1]["model"] == "probe-model-c"
+                assert updated_policy in developer_text(MockResponses.requests[-1]), "Updated rules missing on unchanged default mode"
                 photo.close()
                 desktop.close()
                 assert not (config / "endpoint.json").exists()
                 print(json.dumps({"sameThread": thread, "mockTurns": 3, "modelRequests": 4, "canvasToolImageRoundtrip": "passed", "desktopFirstResume": "passed", "liveCanvasTool": "passed",
-                                  "concurrentStartRejected": "passed", "idleWaitSeconds": 8, "perTurnModel": "passed", "authentication": "passed", "eofShutdown": "passed"}, indent=2))
+                                  "perTurnDeveloperInstructions": "passed", "concurrentStartRejected": "passed", "idleWaitSeconds": 8, "perTurnModel": "passed", "authentication": "passed", "eofShutdown": "passed"}, indent=2))
             except Exception:
                 log.flush()
                 print((root / "bridge.log").read_text(encoding="utf-8", errors="replace"), flush=True)

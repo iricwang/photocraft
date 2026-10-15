@@ -885,12 +885,13 @@ pub fn doc_point_at(app: &PhotocraftApp, pos: Pos2) -> Option<[f64; 2]> {
 /// point; `View::zoom` is stored in physical pixels per document pixel. `aspect` is the
 /// displayed pixel aspect ratio ([`ViewXform::aspect`]): the image is that much wider on screen.
 pub fn fit_view(view: &mut View, doc: &Document, area: Vec2, ppp: f32, aspect: f32) {
-    let (w, h) = (doc.size.width as f32, doc.size.height as f32);
+    let bounds = if doc.defold.is_some() { photocraft_engine::defold_design::scene_bounds(doc).map_or(doc.bounds(), |(r, _)| r) } else { doc.bounds() };
+    let (w, h) = (bounds.width() as f32, bounds.height() as f32);
     let shown_w = w * if aspect.is_finite() && aspect > 0.0 { aspect } else { 1.0 };
     let points = ((area.x - 40.0) / shown_w).min((area.y - 40.0) / h).min(1.0);
     let zoom = crate::zoom_levels::clamp(points * ppp, [doc.size.width, doc.size.height]);
     view.zoom = zoom;
-    view.center = [w / 2.0, h / 2.0];
+    view.center = [bounds.x0 as f32 + w / 2.0, bounds.y0 as f32 + h / 2.0];
     view.fit_pending = false;
     view.fill_pending = false;
 }
@@ -1172,11 +1173,11 @@ pub fn ensure_texture(app: &mut PhotocraftApp, ctx: &egui::Context, idx: usize, 
         tex_preview_key: 0,
         grid: None,
     });
-    if cache.tex_revision != revision || cache.texture.is_none() || cache.tex_preview_key != preview_key {
+    let limit = (ctx.input(|i| i.max_texture_side).min(MAX_TEXTURE as usize) as u32).max(1);
+    let factor = doc.size.width.max(doc.size.height) / (limit + 1) + 1;
+    let (w, h) = ((doc.size.width / factor).max(1), (doc.size.height / factor).max(1));
+    if cache.tex_revision != revision || cache.texture.as_ref().is_none_or(|t| t.size() != [w as usize, h as usize]) || cache.tex_preview_key != preview_key {
         let t0 = crate::gpu_canvas::now_ms();
-        let longest = doc.size.width.max(doc.size.height);
-        let factor = longest.div_ceil(MAX_TEXTURE).max(1);
-        let (w, h) = ((doc.size.width / factor).max(1), (doc.size.height / factor).max(1));
         let current = cache.texture.as_mut().filter(|t| t.size() == [w as usize, h as usize]);
         if let (Some(d), Some(t)) = (damage, current) {
             // Only what the edit or stroke touched: the reduced texture's pixels over it, with the
@@ -1718,7 +1719,7 @@ fn documents(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
         paint_dots(ui, ui.available_rect_before_wrap(), app.session.prefs().interface.show_canvas_dots);
         return;
     }
-    if !app.ui.view.hides_tabs() || opening {
+    if (!app.ui.view.hides_tabs() || opening) && app.session.gui.documents.is_empty() {
         // Flat Spectrum tabs sit directly against the canvas. The parent's default vertical
         // item spacing would otherwise leave a visible gap below the tab strip (#2188).
         let spacing = ui.spacing().item_spacing.y;
@@ -2530,7 +2531,7 @@ pub fn canvas_view(app: &mut PhotocraftApp, ui: &mut egui::Ui, idx: usize, rect:
         fill_view(&mut view, &doc, rect.size(), ppp, aspect);
     }
     // Preferences › Tools › Overscroll off: clamp before anything is drawn (scrollbars.rs).
-    if !app.session.prefs().tools.overscroll && crate::scrollbars::clamp_view(&mut view, rect.size() / vec2(aspect, 1.0), ppp) {
+    if doc.defold.is_none() && !app.session.prefs().tools.overscroll && crate::scrollbars::clamp_view(&mut view, rect.size() / vec2(aspect, 1.0), ppp) {
         ctx.request_repaint();
     }
     let flip = app.ui.view.flip_horizontal;
@@ -2567,13 +2568,13 @@ pub fn canvas_view(app: &mut PhotocraftApp, ui: &mut egui::Ui, idx: usize, rect:
         } else {
             Vec::new()
         };
-        let drop_shadow = drop_shadow && !beyond && !app.ui.view.pattern_preview;
+        let drop_shadow = drop_shadow && doc.defold.is_none() && !beyond && !app.ui.view.pattern_preview;
         // Live adjustment previews on big documents use a downsampled proxy (see proxy.rs), unless
         // Preferences › Performance › Low Resolution Previews is off.
         let mut on_gpu = false;
         // A flipped or pixel-aspect-corrected view draws through the CPU path (the GPU canvas shader
         // has no mirroring or non-square pixels). Rotation stays on the GPU: it is a view uniform.
-        let gpu_ok = crate::gpu_canvas::gpu_view_ok(flip, view.rotation, aspect);
+        let gpu_ok = doc.defold.is_none() && crate::gpu_canvas::gpu_view_ok(flip, view.rotation, aspect);
         if app.gpu.is_some()
             && gpu_ok
             && let Some((k, key, preview_size)) =
@@ -2632,7 +2633,20 @@ pub fn canvas_view(app: &mut PhotocraftApp, ui: &mut egui::Ui, idx: usize, rect:
             let rotated = view.rotation.abs() > 0.05;
             let checkerboard = app.session.prefs().transparency_and_gamut.square().map(|square| (checker(app, &ctx), square));
             let tex = ensure_texture(app, &ctx, idx, output).map(|(tex, _scale)| tex);
-            paint_cpu_document(&painter, &xf, doc.bounds(), rotated, checkerboard, tex);
+            if doc.defold.is_some() {
+                if let Some(tex) = tex {
+                    paint_mapped_image(
+                        &painter,
+                        &xf,
+                        tex,
+                        Rect::from_min_max(Pos2::ZERO, pos2(1.0, 1.0)),
+                        [doc.size.width as f32, doc.size.height as f32],
+                        Color32::WHITE,
+                    );
+                }
+            } else {
+                paint_cpu_document(&painter, &xf, doc.bounds(), rotated, checkerboard, tex);
+            }
             for &c in &pattern {
                 paint_cpu_document(&painter, &pattern_xf(&xf, c, size), doc.bounds(), rotated, checkerboard, tex);
             }
@@ -3311,7 +3325,10 @@ pub fn canvas_view(app: &mut PhotocraftApp, ui: &mut egui::Ui, idx: usize, rect:
         crate::snap_ui::draw(app, &painter, &xf);
         // The canvas edge isn't outlined while the pixels past it show (Photoshop's crop preview),
         // nor while the Crop tool hides everything outside its box (Show Cropped Area off).
-        if border == photocraft_engine::prefs::CanvasBorder::Line && !beyond && !crate::crop_shield::hides_outside(app) {
+        if doc.defold.is_some() {
+            let t = crate::theme::Tokens::get(&ctx);
+            painter.add(egui::Shape::closed_line(doc_quad(&xf, doc.bounds()).to_vec(), Stroke::new(1.0, t.text)));
+        } else if border == photocraft_engine::prefs::CanvasBorder::Line && !beyond && !crate::crop_shield::hides_outside(app) {
             painter.rect_stroke(img_rect, 0.0, Stroke::new(1.0, Color32::from_gray(20)), egui::StrokeKind::Outside);
         }
         crate::type_tool::draw_overlay(app, &painter, &xf);
@@ -3813,6 +3830,10 @@ fn draw_crop_guides(painter: &egui::Painter, guides: &[crate::crop_overlay::Poly
 struct BeyondCanvas {
     snapshot: std::sync::Weak<Document>,
     key: u64,
+    revision: u64,
+    display_key: u64,
+    bounds: DRect,
+    factor: u32,
     /// Every layer's pixels and the canvas (`extra_cmds::reveal_all_bounds`).
     extent: DRect,
     /// The composite around the canvas: each band, the area its texture covers, the texture.
@@ -3865,10 +3886,17 @@ fn ring(outer: DRect, inner: DRect) -> Vec<DRect> {
 /// past the canvas was drawn.
 fn draw_beyond_canvas(app: &mut PhotocraftApp, painter: &egui::Painter, xf: &ViewXform, idx: usize, output: Option<u32>) -> bool {
     let ctx = painter.ctx().clone();
-    let Some((snapshot, id)) = app.session.documents().get(idx).map(|st| (std::sync::Arc::downgrade(&st.doc), st.doc.id)) else { return false };
+    let Some((snapshot, id, revision, last_damage)) = app.session.documents().get(idx).map(|st| {
+        (std::sync::Arc::downgrade(&st.doc), st.doc.id, st.revision,
+         st.last_damage.map(|r| if r.is_empty() { r } else { r.inflate(effect_reach(&st.doc.layers)) }))
+    }) else { return false };
     let key = egui::Id::new(("crop-beyond-canvas", id.0, output));
-    let frame =
-        app.ui.crop_rect.filter(|f| f.iter().all(|v| v.is_finite()) && app.session.active_index() == Some(idx) && crate::crop_ui::shows_beyond_canvas(app));
+    let gui = app.session.documents().get(idx).is_some_and(|s| s.doc.defold.is_some());
+    let frame = if gui {
+        app.session.documents().get(idx).map(|s| [0.0, 0.0, f64::from(s.doc.size.width), f64::from(s.doc.size.height)])
+    } else {
+        app.ui.crop_rect.filter(|f| f.iter().all(|v| v.is_finite()) && app.session.active_index() == Some(idx) && crate::crop_ui::shows_beyond_canvas(app))
+    };
     let Some(f) = frame else {
         ctx.data_mut(|d| d.remove::<BeyondCanvas>(key));
         return false;
@@ -3880,14 +3908,48 @@ fn draw_beyond_canvas(app: &mut PhotocraftApp, painter: &egui::Painter, xf: &Vie
     let (display, display_key) = canvas_display(app, &doc, output);
     let doc_key = preview_key ^ display_key;
     let cached: Option<BeyondCanvas> = ctx.data(|d| d.get_temp(key));
-    let c = match cached.filter(|c| c.snapshot.ptr_eq(&snapshot) && c.key == doc_key) {
-        Some(c) => c,
-        None => {
+    let damage = cached.as_ref().filter(|c| gui && c.display_key == display_key && c.bounds == doc.bounds())
+        .filter(|c| (preview_key == 0 && c.key == display_key) || live_stroke(app, idx).is_some()
+            || app.committed_stroke.as_ref().is_some_and(|stroke| stroke.doc == id && stroke.revision == revision && stroke.since(c.key ^ display_key).is_some()))
+        .and_then(|c| damage_since(app, idx, (c.revision, c.key), (revision, preview_key), display_key, last_damage));
+    let c = match (cached, damage) {
+        (Some(mut c), _) if c.snapshot.ptr_eq(&snapshot) && c.key == doc_key => {
+            c.revision = revision;
+            c
+        }
+        // The same damage history used by the ordinary canvas includes live dabs,
+        // commits and effect margins. Unknown changes or an expanding scene rebuild.
+        (Some(mut c), Some(damage)) if damage.is_empty() || damage.intersect(&c.extent) == damage => {
             let t0 = crate::gpu_canvas::now_ms();
-            let extent = photocraft_engine::extra_cmds::reveal_all_bounds(&doc);
-            // One texel per `k` document pixels keeps every texture within MAX_TEXTURE.
-            let k = extent.width().max(extent.height()).div_ceil(MAX_TEXTURE).max(1);
-            let proxy = (k > 1).then(|| photocraft_compose::proxy::proxy_document(&doc, k));
+            let k = c.factor.max(1) as i32;
+            let up = |v: i32| (v.div_euclid(k) + i32::from(v.rem_euclid(k) != 0)).saturating_mul(k);
+            for (_, area, tex) in &mut c.bands {
+                let r = damage.intersect(area);
+                if r.is_empty() { continue; }
+                // Align to the original texture's reduction grid, also for negative
+                // scene coordinates, so partial updates equal a complete composite.
+                let r = DRect::new(r.x0.div_euclid(k).saturating_mul(k), r.y0.div_euclid(k).saturating_mul(k), up(r.x1), up(r.y1)).intersect(area);
+                let buf = photocraft_compose::render_reduced_rect(&doc, r, r.width() / c.factor.max(1), r.height() / c.factor.max(1));
+                tex.set_partial([(r.x0 - area.x0) as usize / c.factor.max(1) as usize, (r.y0 - area.y0) as usize / c.factor.max(1) as usize],
+                    display_image(display.as_deref(), &buf), TextureOptions { magnification: egui::TextureFilter::Nearest, ..TextureOptions::LINEAR });
+            }
+            c.snapshot = snapshot;
+            c.key = doc_key;
+            c.revision = revision;
+            app.perf.span("crop-beyond-canvas", crate::gpu_canvas::now_ms() - t0);
+            c
+        }
+        _ => {
+            let t0 = crate::gpu_canvas::now_ms();
+            let extent = if gui {
+                photocraft_engine::defold_design::scene_bounds(&doc).map_or(doc.bounds(), |(r, _)| r)
+            } else {
+                photocraft_engine::extra_cmds::reveal_all_bounds(&doc)
+            };
+            // Leave one texel for rounding negative scene coordinates outwards.
+            let max_side = (ctx.input(|i| i.max_texture_side) as u32).min(MAX_TEXTURE).saturating_sub(1).max(1);
+            let k = extent.width().max(extent.height()).div_ceil(max_side).max(1);
+            let proxy = (k > 1 && !gui).then(|| photocraft_compose::proxy::proxy_document(&doc, k));
             let src = proxy.as_ref().unwrap_or(&*doc);
             let k = k as i32;
             let opts = TextureOptions { magnification: egui::TextureFilter::Nearest, ..TextureOptions::LINEAR };
@@ -3897,17 +3959,17 @@ fn draw_beyond_canvas(app: &mut PhotocraftApp, painter: &egui::Painter, xf: &Vie
                     // The proxy pixels over `b`: document pixels / k, rounded outwards.
                     let up = |v: i32| v.div_euclid(k) + i32::from(v.rem_euclid(k) != 0);
                     let p = DRect::new(b.x0.div_euclid(k), b.y0.div_euclid(k), up(b.x1), up(b.y1));
-                    let buf = photocraft_compose::render_reduced_rect(src, p, p.width(), p.height());
+                    let area = DRect::new(p.x0.saturating_mul(k), p.y0.saturating_mul(k), p.x1.saturating_mul(k), p.y1.saturating_mul(k));
+                    let buf = photocraft_compose::render_reduced_rect(src, if gui { area } else { p }, p.width(), p.height());
                     let tex = ctx.load_texture("crop-beyond-canvas", display_image(display.as_deref(), &buf), opts);
-                    (b, DRect::new(p.x0.saturating_mul(k), p.y0.saturating_mul(k), p.x1.saturating_mul(k), p.y1.saturating_mul(k)), tex)
+                    (b, area, tex)
                 })
                 .collect();
             app.perf.span("crop-beyond-canvas", crate::gpu_canvas::now_ms() - t0);
-            let c = BeyondCanvas { snapshot, key: doc_key, extent, bands };
-            ctx.data_mut(|d| d.insert_temp(key, c.clone()));
-            c
+            BeyondCanvas { snapshot, key: doc_key, revision, display_key, bounds: doc.bounds(), factor: k as u32, extent, bands }
         }
     };
+    ctx.data_mut(|d| d.insert_temp(key, c.clone()));
     // Transparency out to the frame, in phase with the canvas's own checkerboard.
     let canvas = xf.doc_rect(doc.bounds());
     // A turned frame reaches as far as its corners.
@@ -3922,6 +3984,9 @@ fn draw_beyond_canvas(app: &mut PhotocraftApp, painter: &egui::Painter, xf: &Vie
     let turned = xf.rotation != 0.0;
     let checker_uv = |p: Pos2, sq: f32| ((p - canvas.min) / (2.0 * sq)).to_pos2();
     for &b in &around {
+        if gui {
+            continue;
+        }
         if turned {
             let q = doc_quad(xf, b);
             match square.zip(checker_id) {
@@ -5340,6 +5405,25 @@ mod tests {
 
     use super::*;
 
+    #[test]
+    fn native_canvas_respects_renderer_texture_limit_and_changes() {
+        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+        app.run("file.new", json!({"width":300,"height":100})).unwrap();
+        let ctx = egui::Context::default();
+        for limit in [128, 64, 512] {
+            ctx.input_mut(|i| i.max_texture_side = limit);
+            assert!(ensure_texture(&mut app, &ctx, 0, None).is_some());
+            let mut delta = ctx.tex_manager().write().take_delta();
+            for uploads in delta.set.values() {
+                for upload in uploads {
+                    let egui::ImageData::Color(image) = &upload.image;
+                    assert!(image.size.iter().all(|side| *side <= limit));
+                }
+            }
+            delta.clear();
+        }
+    }
+
     /// #569: displays 1 (sRGB) and 4 (Display P3) side by side, and a document filled with an
     /// sRGB colour.
     fn app_on_two_displays() -> PhotocraftApp {
@@ -6699,6 +6783,40 @@ mod tests {
     }
 
     #[test]
+    fn gui_scene_fit_and_paint_include_negative_nodes_without_resizing_reference() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("game.project"), "[display]\nwidth=160\nheight=80\n").unwrap();
+        std::fs::write(dir.path().join("scene.gui"), "nodes {id:\"panel\" position {x:-30 y:-20} size {x:32 y:16} color {x:0 y:0 z:1}}").unwrap();
+        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+        app.run("defold.openDesign", json!({"path":dir.path().join("scene.gui")})).unwrap();
+        app.sync_views();
+        let doc = app.session.active().unwrap().doc.clone();
+        let mut view = View::default();
+        fit_view(&mut view, &doc, vec2(600.0, 400.0), 1.0, 1.0);
+        assert_eq!(view.center, [57.0, 54.0]);
+        assert_eq!(doc.size, photocraft_geom::Size::new(160, 80));
+        app.ui.tool = Tool::Brush;
+        app.run("tools.setBrush", json!({"brush":{"size":4,"hardness":1.0}})).unwrap();
+        let m = egui::Modifiers::NONE;
+        tool_event(&mut app, ToolEvent::Down { x: -30.0, y: 100.0, pressure: 1.0 }, m);
+        tool_event(&mut app, ToolEvent::Up { x: -30.0, y: 100.0 }, m);
+        let st = app.session.active().unwrap();
+        assert!(st.doc.layer(st.active_layer.unwrap()).unwrap().surface().unwrap().rgba(-30, 100)[2] < 0.1);
+        assert_eq!(st.doc.size, photocraft_geom::Size::new(160, 80));
+        let ctx = egui::Context::default();
+        let mut output = ctx.run_ui(Default::default(), |ui| {
+            let rect = ui.available_rect_before_wrap();
+            let xf = ViewXform { rect, zoom: 1.0, center: view.center, flip: false, rotation: 0.0, aspect: 1.0 };
+            assert!(draw_beyond_canvas(&mut app, ui.painter(), &xf, 0, None));
+        });
+        output.textures_delta.clear();
+        let key = egui::Id::new(("crop-beyond-canvas", doc.id.0, None::<u32>));
+        let cached = ctx.data(|d| d.get_temp::<BeyondCanvas>(key)).unwrap();
+        assert_eq!(cached.extent, DRect::new(-46, 0, 160, 108));
+        assert!(cached.bands.iter().any(|(r, _, _)| r.x0 < 0));
+    }
+
+    #[test]
     fn zoom_about_centres_the_clicked_point_with_the_preference() {
         let rect = Rect::from_min_size(Pos2::ZERO, vec2(800.0, 600.0));
         let p = pos2(600.0, 200.0);
@@ -6920,3 +7038,7 @@ mod rotation_preview_isolation_tests {
         assert!(ensure_filter_preview(&mut app, 0, &egui::Context::default()).is_none(), "an inactive tab must never inherit the command preview");
     }
 }
+
+#[cfg(test)]
+#[path = "gui_canvas_tests.rs"]
+mod gui_tests;

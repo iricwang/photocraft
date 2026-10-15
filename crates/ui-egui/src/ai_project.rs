@@ -12,6 +12,25 @@ pub(crate) struct PendingEvent {
 }
 
 pub(crate) fn sync_prompt(app: &mut PhotocraftApp) {
+    if let Some(gui) = app.session.gui.active {
+        if app.ui.defold.prompt_gui != Some(gui) {
+            if let Some(previous) = app.ui.defold.prompt_gui {
+                app.ui.defold.prompt_drafts.insert(previous, app.ui.ai.prompt.clone());
+            } else if let Some((_, open_id)) = app.ai_runtime.project_document {
+                app.ai_runtime.project_drafts.insert(open_id, app.ui.ai.prompt.clone());
+            }
+            app.ui.ai.prompt = app.ui.defold.prompt_drafts.get(&gui).cloned().unwrap_or_default();
+            app.ui.defold.prompt_gui = Some(gui);
+        }
+        return;
+    }
+    if let Some(gui) = app.ui.defold.prompt_gui.take() {
+        app.ui.defold.prompt_drafts.insert(gui, app.ui.ai.prompt.clone());
+        app.ai_runtime.project_document = None;
+        if app.session.active().is_none() {
+            app.ui.ai.prompt.clear();
+        }
+    }
     let active = app.session.active();
     let document = active.map(|st| (st.doc.id, st.open_id));
     if app.ai_runtime.project_document == document {

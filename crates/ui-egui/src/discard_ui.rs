@@ -16,6 +16,7 @@ const EXIT: &str = "file.exit";
 
 /// An action waiting on the user, and the dirty documents still to ask about.
 pub struct Prompt {
+    gui_target: Option<u64>,
     id: String,
     params: Value,
     /// The document the command was aimed at (`document` param, else the active one), if it has one.
@@ -65,11 +66,14 @@ fn discarded(app: &PhotocraftApp, id: &str, params: &Value) -> (Option<DocId>, V
 
 /// Park `id` behind a prompt if it would discard unsaved work. Returns whether it did.
 pub fn intercept(app: &mut PhotocraftApp, id: &str, params: &Value) -> bool {
+    if crate::defold_ui::intercept_close(app, id, params) {
+        return true;
+    }
     let (target, docs) = discarded(app, id, params);
     if docs.is_empty() {
         return false;
     }
-    let prompt = Prompt { id: id.to_string(), params: params.clone(), target, docs };
+    let prompt = Prompt { gui_target: app.session.gui.active, id: id.to_string(), params: params.clone(), target, docs };
     match &app.discard {
         None => ask(app, prompt),
         // Quitting overrides whatever is pending: it covers every document, so nothing is lost.
@@ -104,7 +108,7 @@ impl PhotocraftApp {
     /// Whether closing now would lose work: a document has unsaved changes and closing wasn't
     /// confirmed. The web build has the browser ask before leaving the page while this holds (#1380).
     pub fn has_unsaved_work(&self) -> bool {
-        !self.allow_close && self.session.documents().iter().any(|d| d.is_dirty())
+        !self.allow_close && (self.session.documents().iter().any(|d| d.is_dirty()) || self.session.gui.documents.iter().any(|d| d.dirty()))
     }
 }
 
@@ -155,11 +159,16 @@ fn advance(app: &mut PhotocraftApp, ctx: &egui::Context) {
     if next.is_some() {
         return;
     }
-    let Some(Prompt { id, mut params, target, .. }) = app.discard.take() else { return };
+    let Some(Prompt { id, mut params, target, gui_target, .. }) = app.discard.take() else { return };
     if id == EXIT {
         app.allow_close = true;
         ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         return;
+    }
+    if id == "file.closeOthers"
+        && let Some(gui) = gui_target
+    {
+        let _ = app.session.activate_gui(gui);
     }
     if let Some(target) = target {
         // The tab may have moved since the command was issued; aim it at the same document.

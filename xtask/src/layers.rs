@@ -33,6 +33,7 @@ impl Class {
 /// The layering table. Names are package names without the `photocraft-`
 /// prefix.
 pub const TABLE: &[(&str, Class)] = &[
+    ("defold-format", Class::Standalone),
     ("geom", Class::Layer(0)),
     ("cms", Class::Layer(0)),
     ("color", Class::Layer(0)),

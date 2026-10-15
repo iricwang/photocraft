@@ -302,6 +302,10 @@ fn start_generation(app: &mut PhotocraftApp, group_id: Option<u64>) -> Result<Va
     if app.ui.ai.provider == "images-api" && app.ai_runtime.api_key.trim().is_empty() {
         return Err("Enter an API key first".into());
     }
+    if app.session.active_gui().is_some() {
+        if group_id.is_some() { return Err("Open the node source to retry its generation".into()); }
+        app.run("defold.openNodeSource", json!({}))?;
+    }
     if group_id.is_none() && app.ui.ai.provider == "codex" && app.ui.ai.mode == photocraft_doc::ai::GenerationMode::Component {
         return start_asset_agent(app);
     }
@@ -512,7 +516,10 @@ pub fn tick(app: &mut PhotocraftApp, ctx: &egui::Context) {
         let status = app.run("ai.assetStatus", json!({"jobId":job}));
         match status {
             Ok(status) if status.get("receipt").is_some_and(|v| !v.is_null()) => Ok(status["receipt"].clone()),
-            _ => result.and_then(|_| Err("The asset agent did not commit a layout; generated files are retained".into())),
+            _ => result.and_then(|message| {
+                let status = "The asset agent did not commit a layout; generated files are retained. No automatic retry was started.";
+                Err(if message.trim().is_empty() { status.into() } else { format!("{status}\n{message}") })
+            }),
         }
     } else {
         result.and_then(|image| {
@@ -529,7 +536,10 @@ pub fn tick(app: &mut PhotocraftApp, ctx: &egui::Context) {
                 app.ui.ai.history_document = receipt["documentId"].as_u64();
                 app.ui.ai.history_group = receipt["groupId"].as_u64();
             }
-            let label = format!("{}: {}", tl!("Layer"), receipt["name"].as_str().unwrap_or("AI"));
+            let mut label = format!("{}: {}", tl!("Layer"), receipt["name"].as_str().unwrap_or("AI"));
+            if receipt["placement"]["hasMargins"].as_bool() == Some(true) {
+                label = format!("{label}\n{}", tl!("Image fitted proportionally; original canvas remains visible outside the result."));
+            }
             agent_message.map_or(label.clone(), |message| format!("{label}\n{message}"))
         }
         Err(e) => {
@@ -968,6 +978,61 @@ mod tests {
         assert!(!app.ai_runtime.running());
         assert!(app.ui.ai.status.contains("transparent component"));
         assert_eq!(app.session.active().unwrap().doc.layers, before.layers);
+    }
+
+    #[test]
+    fn proportional_placement_reports_margins_without_another_generation() {
+        let calls = std::rc::Rc::new(std::cell::Cell::new(0));
+        let recorded = calls.clone();
+        let services = crate::Services {
+            ai_generate: Some(Box::new(move |_| {
+                recorded.set(recorded.get() + 1);
+                let (tx, rx) = std::sync::mpsc::channel();
+                tx.send(Ok(encoded_image())).unwrap();
+                Ok(Job { cancel: Default::default(), result: rx })
+            })),
+            ..Default::default()
+        };
+        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+        app.run("file.new", json!({"width":128,"height":64})).unwrap();
+        app.ui.ai.prompt = "Change only the requested content".into();
+        start(&mut app).unwrap();
+        let ctx = egui::Context::default();
+        tick(&mut app, &ctx);
+        assert!(app.ui.ai.status.contains("original canvas remains visible"));
+        tick(&mut app, &ctx);
+        assert_eq!(calls.get(), 1);
+        assert!(!app.ai_runtime.running());
+    }
+
+    #[test]
+    fn asset_clarification_is_shown_without_committing_or_retrying() {
+        let calls = std::rc::Rc::new(std::cell::Cell::new(0));
+        let recorded = calls.clone();
+        let services = crate::Services {
+            ai_generate: Some(Box::new(move |_| {
+                recorded.set(recorded.get() + 1);
+                let (tx, rx) = std::sync::mpsc::channel();
+                tx.send(Ok("Which reference should supply the layout?".into())).unwrap();
+                Ok(Job { cancel: Default::default(), result: rx })
+            })),
+            ..Default::default()
+        };
+        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+        app.run("file.new", json!({"width":100,"height":100})).unwrap();
+        app.ui.ai.provider = "codex".into();
+        app.ui.ai.mode = photocraft_doc::ai::GenerationMode::Component;
+        app.ui.ai.prompt = "Use the reference layout".into();
+        let original = app.session.active().unwrap().doc.clone();
+        start(&mut app).unwrap();
+        let ctx = egui::Context::default();
+        tick(&mut app, &ctx);
+        assert!(app.ui.ai.status.contains("Which reference should supply the layout?"));
+        assert!(app.ui.ai.status.contains("No automatic retry"));
+        tick(&mut app, &ctx);
+        assert_eq!(calls.get(), 1);
+        assert_eq!(app.session.active().unwrap().doc.layers.len(), original.layers.len());
+        assert!(app.session.active().unwrap().doc.ai_generations.is_empty());
     }
 
     #[test]

@@ -392,6 +392,11 @@ fn shift_shown(doc: &Document, l: &mut Layer, dx: i32, dy: i32) {
 /// The document pixels an edit of the layers `ids` (moved, shown, hidden or restyled; contents
 /// otherwise as they were) can have changed from `before` to `after`, or `None` for anywhere.
 pub fn layers_damage(before: &Document, after: &Document, ids: &[LayerId]) -> Option<Rect> {
+    // change_bounds clips to the image canvas. A linked GUI also displays pixels
+    // outside it; until these operations report scene-wide damage, refresh fully.
+    if before.defold.is_some() || after.defold.is_some() {
+        return None;
+    }
     let mut out = Rect::EMPTY;
     for d in [before, after] {
         let canvas = d.bounds();
@@ -599,6 +604,8 @@ fn doc_pixels_equal(a: &Document, b: &Document) -> bool {
         slices: _,
         variables: _,
         timeline: _,
+        design_source_id: _,
+        defold: _,
     } = a;
     *size == b.size
         && resolution_dpi.to_bits() == b.resolution_dpi.to_bits()
@@ -664,6 +671,11 @@ pub(crate) fn insert_damage(before: &Document, after: &Document) -> Option<Rect>
 }
 
 fn damage_between(a: &Document, b: &Document, bounded_additions: bool) -> Option<Rect> {
+    // Brush commands supply their own unclipped dab damage after the edit.
+    // History and structural edits must not reuse canvas-clipped bounds for GUIs.
+    if a.defold.is_some() || b.defold.is_some() {
+        return None;
+    }
     if !doc_pixels_equal(a, b) {
         return None;
     }

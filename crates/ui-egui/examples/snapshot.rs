@@ -60,6 +60,7 @@ fn main() {
         ..Default::default()
     };
     let open = arg(&args, "--open");
+    let selected_gui_node = arg(&args,"--select-defold-node");
     let safe_gpu = args.iter().any(|a| a == "--safe-gpu");
     // `--background-jobs`: long commands run as background jobs, as in the desktop app (#210).
     let background_jobs = args.iter().any(|a| a == "--background-jobs");
@@ -88,6 +89,10 @@ fn main() {
             }
             if let Some(path) = &open {
                 app.open_path(path).expect("open --open file");
+            }
+            if let Some(node)=&selected_gui_node {
+                let layer=app.session.active().and_then(|s|s.doc.defold.as_ref()).and_then(|d|d.nodes.iter().find(|n|n.node==*node)).map(|n|n.artwork).expect("GUI node exists");
+                app.session.execute("layer.select",serde_json::json!({"layer":layer})).expect("select native node artwork");
             }
             app
         });
@@ -167,6 +172,9 @@ fn main() {
         serde_json::json!({"preference": harness.state().session.prefs().interface.language, "resolved": photocraft_ui_egui::i18n::current().code()})
     );
     let img = harness.render().expect("render");
+    if let Some(gui) = harness.state().session.active_gui() {
+        println!("defold: {}", serde_json::json!({"path":gui.path,"nodes":gui.scene.nodes.len(),"live":gui.live.is_some()}));
+    }
     img.save(&out).expect("save png");
     println!("wrote {out} ({}×{})", img.width(), img.height());
 }

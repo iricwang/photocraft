@@ -92,6 +92,9 @@ fn available(app: &PhotocraftApp) -> Result<(), String> {
 
 pub(crate) fn choose(app: &mut PhotocraftApp) -> Result<(), String> {
     available(app)?;
+    if app.session.active_gui().is_some() {
+        app.run("defold.openNodeSource", serde_json::json!({}))?;
+    }
     let target = app.session.active().map(|st| (st.doc.id, st.open_id));
     app.ask_file(
         FileDialogRequest::Open {
@@ -135,6 +138,9 @@ pub(crate) fn choose(app: &mut PhotocraftApp) -> Result<(), String> {
 pub(crate) fn paste(app: &mut PhotocraftApp) -> Result<bool, String> {
     available(app)?;
     let Some((width, height, bytes)) = app.services.clipboard_get_image.as_mut().and_then(|get| get()) else { return Ok(false) };
+    if app.session.active_gui().is_some() {
+        app.run("defold.openNodeSource", serde_json::json!({}))?;
+    }
     LIMITS.check(width, height, ChannelLayout::Rgba, SampleType::U8).map_err(|e| e.to_string())?;
     let name = tl!("Clipboard image").to_owned();
     prepare(app, app.session.active().map(|st| (st.doc.id, st.open_id)), move || {

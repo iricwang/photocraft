@@ -15,6 +15,8 @@ const PANELS: &[(&str, &str, Group)] = &[
     ("properties", "Properties", Group::Properties),
     ("adjustments", "Adjustments", Group::Properties),
     ("aiSettings", "Model settings", Group::AiSettings),
+    ("defoldProperties", "Defold GUI Properties", Group::DefoldProperties),
+    ("defoldSync", "Defold Sync", Group::DefoldSync),
     ("character", "Character", Group::Character),
     ("paragraph", "Paragraph", Group::Character),
     ("navigator", "Navigator", Group::Navigator),
@@ -78,12 +80,22 @@ fn legacy_layout(app: &PhotocraftApp, all: bool) -> Layout<String> {
             Group::Color => app.ui.dock_tabs.color,
             Group::Properties => app.ui.dock_tabs.properties,
             Group::AiSettings => app.ui.dock_tabs.ai_settings,
+            Group::DefoldProperties => app.ui.dock_tabs.defold_properties,
+            Group::DefoldSync => app.ui.dock_tabs.defold_sync,
             Group::Character => app.ui.dock_tabs.character,
             Group::Navigator => app.ui.dock_tabs.navigator,
             Group::History => app.ui.dock_tabs.history,
             Group::Layers => app.ui.dock_tabs.layers,
         };
         let active = labels.get(selected).and_then(|label| normalize(label)).and_then(|id| panels.iter().position(|p| p == id)).unwrap_or(0);
+        if group == Group::DefoldSync {
+            layout.floating.push(Floating { panels, active, rect: [80.0, 160.0, 320.0, 300.0] });
+            continue;
+        }
+        if group == Group::DefoldProperties {
+            layout.floating.push(Floating { panels, active, rect: [64.0, 140.0, 360.0, 560.0] });
+            continue;
+        }
         if group == Group::AiSettings {
             layout.floating.push(Floating { panels, active, rect: [400.0, 140.0, 288.0, 220.0] });
             continue;
@@ -135,6 +147,45 @@ fn first_root(layout: &Layout<String>, except: &str) -> Option<String> {
     root.panels().into_iter().find(|p| p.as_str() != except).cloned()
 }
 
+/// First use shares the native Properties tab group; customized positions remain remembered.
+pub(crate) fn open_defold_properties(app: &mut PhotocraftApp) -> Result<Value, String> {
+    let panel = "defoldProperties";
+    let old_default =
+        app.ui.docking.as_ref().is_some_and(|layout| layout.floating.iter().any(|f| f.panels == [panel] && f.rect == [64.0, 140.0, 360.0, 560.0]));
+    if old_default && !app.session.prefs().workspace_locked {
+        return change(app, "move", &json!({"panel":panel,"anchor":"properties","zone":"tab"}));
+    }
+    if app.ui.docking.as_ref().is_some_and(|layout| layout.contains(&panel.to_owned())) || app.ui.docking_hidden.contains_key(panel) {
+        return change(app, "activate", &json!({"panel":panel}));
+    }
+    if app.session.prefs().workspace_locked {
+        return Err("workspace is locked".into());
+    }
+    let mut layout = app.ui.docking.clone().unwrap_or_else(|| legacy(app));
+    if !valid(&layout) {
+        return Err("saved panel layout is invalid; reset the workspace first".into());
+    }
+    if app.ui.docking.is_none() {
+        app.ui.docking_hidden = migration_hidden(app, &layout);
+    }
+    app.ui.docking_hidden.remove(panel);
+    ensure(&mut layout, "properties")?;
+    layout.apply(Action::OpenAt { panel: panel.into(), anchor: "properties".into(), placement: Placement::Tab { before: None } }).map_err(|e| e.to_string())?;
+    app.ui.docking = Some(layout);
+    app.ui.panels.dock = true;
+    sync_visibility(app);
+    reveal_group(app, panel);
+    Ok(json!({"panel":panel,"layout":app.ui.docking}))
+}
+
+pub(crate) fn open_defold_sync(app: &mut PhotocraftApp) -> Result<Value, String> {
+    let panel = "defoldSync";
+    if app.ui.docking.as_ref().is_some_and(|layout| layout.contains(&panel.to_owned())) || app.ui.docking_hidden.contains_key(panel) {
+        return change(app, "activate", &json!({"panel":panel}));
+    }
+    change(app, "float", &json!({"panel":panel,"x":80,"y":160,"width":320,"height":300}))
+}
+
 fn ensure(layout: &mut Layout<String>, panel: &str) -> Result<(), String> {
     let anchor = first_root(layout, panel);
     layout.apply(Action::Open { panel: panel.into(), anchor }).map_err(|e| e.to_string())
@@ -168,6 +219,12 @@ fn placement(params: &Value) -> Result<Placement<String>, String> {
 }
 
 pub(crate) fn command(app: &mut PhotocraftApp, id: &str, params: &Value) -> Option<Result<Value, String>> {
+    if id == "window.panel.defoldSync" {
+        return Some(open_defold_sync(app));
+    }
+    if id == "window.panel.defoldProperties" {
+        return Some(open_defold_properties(app));
+    }
     if matches!(id, "window.panel.aiSettings" | "window.toggle.aiSettings") {
         let show = match params.get("show").or_else(|| params.get("on")) {
             Some(value) => match value.as_bool() {
@@ -596,7 +653,7 @@ fn migration_hidden(app: &PhotocraftApp, visible: &Layout<String>) -> std::colle
         .iter()
         // Until dragged, model settings belongs to its independent rail flyout. Do not
         // migrate a closed flyout into a hidden main-column tab on unrelated panel moves.
-        .filter(|(id, _, _)| *id != "aiSettings")
+        .filter(|(id, _, _)| !matches!(*id, "aiSettings" | "defoldProperties" | "defoldSync"))
         .filter(|(id, _, _)| !visible.contains(&id.to_string()))
         .filter_map(|(id, _, _)| full.location(&id.to_string()).ok().map(|at| ((*id).to_owned(), at)))
         .collect()
@@ -853,6 +910,8 @@ pub(crate) fn prepare_legacy_update(
                 Group::Color => tabs.color,
                 Group::Properties => tabs.properties,
                 Group::AiSettings => tabs.ai_settings,
+                Group::DefoldProperties => tabs.defold_properties,
+                Group::DefoldSync => tabs.defold_sync,
                 Group::Character => tabs.character,
                 Group::Navigator => tabs.navigator,
                 Group::History => tabs.history,

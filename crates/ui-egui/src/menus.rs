@@ -13,7 +13,8 @@ pub(crate) fn modal_allows(app: &PhotocraftApp, id: &str) -> bool {
     if app.camera_raw.is_some() || crate::crop_ui::blocks(app, id) {
         return false;
     }
-    (app.ui.dialogs.is_empty() && app.discard.is_none()) || crate::shortcuts::NAV_COMMANDS.contains(&id)
+    (app.ui.dialogs.is_empty() && app.discard.is_none() && app.ui.defold.close.is_none() && !app.ui.defold.save_project)
+        || crate::shortcuts::NAV_COMMANDS.contains(&id)
 }
 
 /// Top-level menus in Photoshop order.
@@ -21,8 +22,11 @@ pub const TOP_MENUS: [&str; 10] = ["File", "Edit", "Image", "Layer", "Type", "Se
 
 /// UI-level commands (handled by the shell rather than the engine): id, label, menu, shortcut.
 pub const UI_COMMANDS: &[(&str, &str, &[&str], Option<&str>)] = &[
+    ("defold.projectWindow", "Defold Project…", &["File"], None),
     ("window.ai", "AI Studio", &["Window"], None),
     ("window.panel.aiSettings", "Model settings", &["Window"], None),
+    ("window.panel.defoldProperties", "Defold GUI Properties", &["Window"], None),
+    ("window.panel.defoldSync", "Defold Sync", &["Window"], None),
     ("window.toggle.aiSettings", "Show/Hide Model Settings", &[], None),
     ("ui.symmetryTransform", "Transform Symmetry", &[], None),
     // Right-click the options bar's tool icon (#2825); `tool.resetAll` asks first.
@@ -164,6 +168,9 @@ pub fn invoke(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, params: Va
 
 /// [`invoke`] without the unsaved-changes prompt, for once the user has already answered it.
 pub(crate) fn invoke_unguarded(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, params: Value) -> Result<Value, String> {
+    if let Some(result) = crate::defold_ui::menu(app, id, &params) {
+        return result;
+    }
     if id == "window.ai" {
         let show = match params.get("show") {
             None => !app.ui.ai.visible,
@@ -660,6 +667,9 @@ fn open_path(app: &mut PhotocraftApp, path: &str) -> Result<Value, String> {
 }
 
 pub fn is_enabled(app: &PhotocraftApp, id: &str) -> bool {
+    if app.session.active_gui().is_some() && matches!(id, "file.save" | "file.close" | "file.closeAll" | "file.closeOthers") {
+        return true;
+    }
     if id == "ui.symmetryTransform" {
         return crate::symmetry_ui::can_transform(app);
     }
@@ -697,7 +707,7 @@ pub fn is_enabled(app: &PhotocraftApp, id: &str) -> bool {
         return e;
     }
     match id {
-        "window.panel.activate" | "window.panel.layout" | "window.panel.aiSettings" => true,
+        "window.panel.activate" | "window.panel.layout" | "window.panel.aiSettings" | "window.panel.defoldProperties" | "window.panel.defoldSync" => true,
         "window.panel.group" | "window.panel.move" | "window.panel.float" | "window.panel.dock" | "window.panel.close" => !app.session.prefs().workspace_locked,
         "file.open" | "file.exit" | "file.clearRecent" | "file.removeRecent" | "help.about" | "help.systemInfo" | "edit.search" => true,
         i if i.starts_with("file.openRecent.") => true,
@@ -708,7 +718,8 @@ pub fn is_enabled(app: &PhotocraftApp, id: &str) -> bool {
             app.session.active().is_some() && app.services.export.is_some()
         }
         i if i.starts_with("window.toggle.") => true,
-        "window.ai" | "window.togglePanels" => true,
+        "window.ai" | "window.togglePanels" | "defold.projectWindow" => true,
+        "edit.freeTransform" if app.session.active_gui().is_some() => true,
         // With one document open the key stays quiet, as in Photoshop, rather than reporting why.
         "window.nextDocument" | "window.previousDocument" => app.session.active().is_some(),
         i if panel_alias(i).is_some() || workspace_name(i).is_some() => true,

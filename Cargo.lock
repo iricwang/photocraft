@@ -4479,6 +4479,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "photocraft-defold-format"
+version = "0.7.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "photocraft-doc"
 version = "0.7.0"
 dependencies = [
@@ -4504,6 +4512,7 @@ dependencies = [
  "photocraft-codecs",
  "photocraft-color",
  "photocraft-compose",
+ "photocraft-defold-format",
  "photocraft-doc",
  "photocraft-format",
  "photocraft-geom",
@@ -4520,6 +4529,7 @@ dependencies = [
  "roxmltree",
  "serde",
  "serde_json",
+ "tempfile",
  "thiserror 2.0.21",
  "wat",
 ]
@@ -4727,6 +4737,7 @@ dependencies = [
  "photocraft-codecs",
  "photocraft-color",
  "photocraft-compose",
+ "photocraft-defold-format",
  "photocraft-doc",
  "photocraft-engine",
  "photocraft-format",

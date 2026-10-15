@@ -339,6 +339,7 @@ pub(crate) fn flattened(doc: &Document, fmt: PixelFormat) -> Surface {
 // ---------- close / revert / save a copy / open as ----------
 
 fn close_all(s: &mut Session) -> Result<Value> {
+    crate::defold_cmds::close_set(s, false)?;
     let n = s.documents().len();
     while !s.documents().is_empty() {
         s.close(s.documents().len() - 1);
@@ -347,6 +348,15 @@ fn close_all(s: &mut Session) -> Result<Value> {
 }
 
 fn close_others(s: &mut Session, p: &Value) -> Result<Value> {
+    if s.active_gui().is_some() && p.get("document").is_none() {
+        crate::defold_cmds::close_set(s, true)?;
+        let n = s.documents().len();
+        while !s.documents().is_empty() {
+            s.close(s.documents().len() - 1);
+        }
+        return Ok(json!({"closed":n}));
+    }
+    crate::defold_cmds::close_set(s, false)?;
     let keep = p.get("document").and_then(Value::as_u64).map(|v| v as usize).or(s.active_index()).ok_or(EngineError::NoDocument)?;
     if keep >= s.documents().len() {
         return Err(EngineError::BadParams { cmd: "file.closeOthers".into(), msg: format!("no document {keep}") });
@@ -404,6 +414,8 @@ pub fn open_bytes_as(s: &mut Session, name: &str, bytes: &[u8], as_ext: Option<&
     };
     let r = photocraft_io::import(&decode_name, bytes).map_err(|e| EngineError::Other(format!("{decode_name}: {e}")))?;
     let mut doc = r.document;
+    let mut warnings = r.warnings;
+    warnings.extend(crate::defold_design::prepare_open(&mut doc)?);
     let path = match template_name(s, name) {
         Some(untitled) => {
             doc.name = untitled;
@@ -420,7 +432,7 @@ pub fn open_bytes_as(s: &mut Session, name: &str, bytes: &[u8], as_ext: Option<&
         st.source_read_only = r.source_read_only;
     }
     // Import notes (e.g. how a camera raw was developed, or that only its preview opened).
-    Ok(json!({"document": i, "color": color, "warnings": r.warnings}))
+    Ok(json!({"document": i, "color": color, "warnings": warnings}))
 }
 
 fn open_as(s: &mut Session, p: &Value) -> Result<Value> {
@@ -1353,14 +1365,14 @@ pub fn specs() -> Vec<CommandSpec> {
         };
     }
     vec![
-        spec!("file.closeAll", "Close All", &["File"], Some("Cmd+Alt+W"), "{}", has_doc, |s, _| close_all(s)),
+        spec!("file.closeAll", "Close All", &["File"], Some("Cmd+Alt+W"), "{}", crate::defold_cmds::has_any_document, |s, _| close_all(s)),
         spec!(
             "file.closeOthers",
             "Close Others",
             &["File"],
             Some("Cmd+Alt+P"),
             r##"{"document":index? (the one to keep; default active)}"##,
-            has_doc,
+            crate::defold_cmds::has_any_document,
             close_others
         ),
         // The document tab's menu (UI-217-6): the tab's own file in the platform file manager.

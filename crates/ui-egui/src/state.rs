@@ -381,6 +381,10 @@ pub struct Panels {
     pub layers: bool,
     pub history: bool,
     pub properties: bool,
+    #[serde(default, rename = "defoldProperties")]
+    pub defold_properties: bool,
+    #[serde(default, rename = "defoldSync")]
+    pub defold_sync: bool,
     pub color: bool,
     pub navigator: bool,
     /// Dockable AI model and connection settings, independent of the prompt bar.
@@ -424,6 +428,8 @@ impl Default for Panels {
             layers: true,
             history: false,
             properties: true,
+            defold_properties: false,
+            defold_sync: false,
             color: true,
             navigator: false,
             ai_settings: false,
@@ -1002,6 +1008,10 @@ pub struct DockTabs {
     #[serde(rename = "aiSettings", alias = "ai_settings")]
     pub ai_settings: usize,
     pub properties: usize,
+    #[serde(rename = "defoldProperties")]
+    pub defold_properties: usize,
+    #[serde(rename = "defoldSync")]
+    pub defold_sync: usize,
     pub color: usize,
     pub layers: usize,
     /// Navigator | Histogram | Info.
@@ -1075,6 +1085,8 @@ impl Default for AiPanelState {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct UiState {
+    #[serde(default)]
+    pub defold: crate::defold_ui::GuiUiState,
     pub tool: Tool,
     #[serde(default)]
     pub ai: AiPanelState,
@@ -1293,6 +1305,7 @@ impl Default for UiState {
         Self {
             tool: Tool::Brush,
             ai: AiPanelState::default(),
+            defold: Default::default(),
             group_tools: Vec::new(),
             recent_files: Vec::new(),
             text_edit: None,

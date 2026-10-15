@@ -3684,6 +3684,7 @@ navigator	Zoom	Zvětšení
 	Use current layer as reference	Použít aktuální vrstvu jako předlohu
 	Generate image	Vygenerovat obrázek
 	Generating image...	Generování obrázku...
+	Image fitted proportionally; original canvas remains visible outside the result.	Obrázek byl přizpůsoben se zachováním poměru stran; mimo výsledek zůstává viditelné původní plátno.
 	Generation cancelled	Generování zrušeno
 	Refresh models	Obnovit modely
 	Optimizing prompt...	Optimalizace zadání...
@@ -3728,3 +3729,71 @@ navigator	Zoom	Zvětšení
 	AI disabled	AI vypnuta
 	Generation details	Podrobnosti generování
 	Generating	Generování
+
+	Save GUI	Uložit GUI
+	Recover draft	Obnovit koncept
+	Reload textures	Znovu načíst textury
+	Close GUI	Zavřít GUI
+	Nodes	Uzly
+	Return to GUI	Zpět do GUI
+	Link selected layer	Propojit vybranou vrstvu
+	Use whole canvas	Použít celé plátno
+	Publish to Defold	Publikovat do Defoldu
+	Edit / generate node image	Upravit / vygenerovat obrázek uzlu
+	Locate resource	Najít prostředek
+	Show resource in folder	Zobrazit prostředek ve složce
+	Copy resource path	Kopírovat cestu prostředku
+	Approximate preview · default layout · verify advanced effects in Defold	Přibližný náhled · Výchozí rozvržení · Pokročilé efekty ověřte v Defoldu
+	Scale X	Měřítko X
+	Scale Y	Měřítko Y
+	Defold Project…	Defold Project…
+	Defold Project	Defold Project
+	Project folder (game.project)	Project folder (game.project)
+	Connect Defold	Connect Defold
+	Sync paused	Sync paused
+	Live · Defold	Live · Defold
+	Add child	Add child
+	Add sibling below	Add sibling below
+	Add child node	Add child node
+	Defold saves all modified project resources. Continue?	Defold saves all modified project resources. Continue?
+	Approximate preview · waiting for Defold	Approximate preview · waiting for Defold
+	Refresh	Refresh
+	Open resource in Defold	Open resource in Defold
+	Add GUI node	Add GUI node
+	Adjust mode	Adjust mode
+	Clipping inverted	Clipping inverted
+	Clipping mode	Clipping mode
+	Clipping visible	Clipping visible
+	Fill angle	Fill angle
+	GUI and artwork synchronized	GUI and artwork synchronized
+	Id	Id
+	Inherit alpha	Inherit alpha
+	Inner radius	Inner radius
+	Line break	Line break
+	Material	Material
+	Nine slice	Nine slice
+	Outer bounds	Outer bounds
+	Outline	Outline
+	Outline opacity	Outline opacity
+	Particle FX	Particle FX
+	Perimeter vertices	Perimeter vertices
+	Pivot	Pivot
+	Shadow opacity	Shadow opacity
+	Size mode	Size mode
+	Sync to Defold	Sync to Defold
+	Synced to Defold; save the GUI in Defold	Synced to Defold; save the GUI in Defold
+	Template	Template
+	Text	Text
+	Text leading	Text leading
+	Text tracking	Text tracking
+	X anchor	X anchor
+	Y anchor	Y anchor
+
+	Defold GUI Properties	Vlastnosti GUI Defold
+
+	Select a Defold GUI node to edit its properties	Vyberte uzel GUI Defold pro úpravu jeho vlastností
+	Defold Sync	Synchronizace Defold
+	Open a linked Defold GUI to synchronize	Pro synchronizaci otevřete propojené GUI Defold
+	GUI resource	Zdroj GUI
+	Edits stay local until you sync	Změny zůstanou místní až do synchronizace
+	GUI nodes	Uzly GUI

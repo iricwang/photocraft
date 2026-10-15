@@ -681,6 +681,9 @@ pub fn system_title_bar(app: &PhotocraftApp) -> bool {
 /// marks unsaved changes, like the `•` in the app-drawn title), or just the app name with no
 /// document open.
 pub fn window_title(app: &PhotocraftApp) -> String {
+    if let Some(d) = app.session.active_gui() {
+        return format!("{}{} — PhotoCraft", if d.dirty() { "*" } else { "" }, crate::file_open::display_name(&d.path));
+    }
     app.session.active().map(|d| format!("{}{} \u{2014} PhotoCraft", if d.is_dirty() { "*" } else { "" }, d.doc.name)).unwrap_or_else(|| "PhotoCraft".into())
 }
 
@@ -1523,6 +1526,13 @@ pub fn status_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
             let control_h = status_bar_heights(&t).1;
             // Read from the right in a right-to-left UI, with the trailing group at the left.
             crate::direction::horizontal_centered(ui, |ui| {
+                if let Some(d) = app.session.active_gui() {
+                    ui.label(format!("{} · {} × {} · {} nodes", crate::file_open::display_name(&d.path), d.width, d.height, d.scene.nodes.len()));
+                    if !app.ui.status.is_empty() {
+                        ui.label(RichText::new(&app.ui.status).color(if app.ui.status_error { t.warning } else { t.text_dim }));
+                    }
+                    return;
+                }
                 if t.pro {
                     crate::chrome_ui::status_bar_pro(app, ui);
                     // Background job progress with Cancel, at the far end (#210).
@@ -1576,7 +1586,7 @@ pub fn right_dock(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     let p = app.ui.panels.clone();
     let mut rail_rect = None;
-    if t.pro && !customized {
+    if (t.pro || app.session.active_gui().is_some() || photocraft_engine::defold_design::linked(&app.session)) && !customized {
         dock_panels(app, ui, &p, &t);
     }
     // Narrow icon rail, unless an embedding app hides it: shows, expands or collapses panel groups.
@@ -1692,7 +1702,9 @@ fn dock_panels(app: &mut PhotocraftApp, ui: &mut egui::Ui, p: &crate::state::Pan
     // Floating in Studio, Properties docks only in Pro (Photoshop).
     let shown: Vec<Group> = [
         (Group::Color, p.color),
-        (Group::Properties, t.pro && p.properties),
+        (Group::Properties, (t.pro || app.session.active_gui().is_some() || photocraft_engine::defold_design::linked(&app.session)) && p.properties),
+        (Group::DefoldProperties, p.defold_properties),
+        (Group::DefoldSync, p.defold_sync),
         (Group::Character, p.character),
         (Group::Navigator, p.navigator),
         (Group::History, p.history),
@@ -1729,6 +1741,8 @@ pub(crate) fn dock_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, group: crate
         (Group::Properties, 0) => properties_body(app, ui),
         (Group::Properties, _) => adjustments_grid(app, ui),
         (Group::AiSettings, _) => crate::ai_panel::settings_content(app, ui),
+        (Group::DefoldProperties, _) => crate::defold_design_ui::panel(app, ui),
+        (Group::DefoldSync, _) => crate::defold_design_ui::sync_panel(app, ui),
         (Group::Character, tab) => crate::type_tool::character_panel(app, ui, tab == 1),
         (Group::Navigator, 0) => navigator(app, ui),
         (Group::Navigator, 1) => crate::tone::histogram_panel(app, ui),
@@ -2106,6 +2120,7 @@ fn opacity_row_layout(available: f32, label_width: f32, gap: f32) -> (f32, bool)
 }
 
 fn layers(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+    if app.session.active_gui().is_some(){crate::defold_ui::layers(app,ui);return;}
     // A new active layer opens its parent groups and is scrolled into view (#152).
     let reveal = crate::layer_reveal::track(app, ui.ctx());
     let Some(st) = app.session.active() else {

@@ -2710,6 +2710,7 @@ curves	Smooth	Glätten
 	Use current layer as reference	Aktuelle Ebene als Vorlage verwenden
 	Generate image	Bild generieren
 	Generating image...	Bild wird generiert...
+	Image fitted proportionally; original canvas remains visible outside the result.	Bild proportional eingepasst; außerhalb des Ergebnisses bleibt die ursprüngliche Leinwand sichtbar.
 	Generation cancelled	Generierung abgebrochen
 	Refresh models	Modelle aktualisieren
 	Optimizing prompt...	Prompt wird optimiert...
@@ -2759,3 +2760,72 @@ curves	Smooth	Glätten
 	Generating	Wird generiert
 	Ready	Bereit
 	New document	Neues Dokument
+
+	Save GUI	GUI speichern
+	Recover draft	Entwurf wiederherstellen
+	Reload textures	Texturen neu laden
+	Close GUI	GUI schließen
+	Nodes	Knoten
+	Return to GUI	Zurück zur GUI
+	Link selected layer	Ausgewählte Ebene verknüpfen
+	Use whole canvas	Gesamte Leinwand verwenden
+	Publish to Defold	In Defold veröffentlichen
+	Edit / generate node image	Knotenbild bearbeiten / erzeugen
+	Locate resource	Ressource finden
+	Show resource in folder	Ressource im Ordner anzeigen
+	Copy resource path	Ressourcenpfad kopieren
+	Approximate preview · default layout · verify advanced effects in Defold	Ungefähre Vorschau · Standardlayout · Erweiterte Effekte in Defold prüfen
+	Scale X	X-Skalierung
+	Scale Y	Y-Skalierung
+	Defold Project…	Defold Project…
+	Defold Project	Defold Project
+	Project folder (game.project)	Project folder (game.project)
+	Connect Defold	Connect Defold
+	Sync paused	Sync paused
+	Live · Defold	Live · Defold
+	Add child	Add child
+	Add sibling below	Add sibling below
+	Add child node	Add child node
+	Defold saves all modified project resources. Continue?	Defold saves all modified project resources. Continue?
+	Approximate preview · waiting for Defold	Approximate preview · waiting for Defold
+	Refresh	Refresh
+	Open resource in Defold	Open resource in Defold
+	Add GUI node	Add GUI node
+	Adjust mode	Adjust mode
+	Clipping inverted	Clipping inverted
+	Clipping mode	Clipping mode
+	Clipping visible	Clipping visible
+	Fill angle	Fill angle
+	GUI and artwork synchronized	GUI and artwork synchronized
+	Id	Id
+	Inherit alpha	Inherit alpha
+	Inner radius	Inner radius
+	Line break	Line break
+	Material	Material
+	Nine slice	Nine slice
+	Outer bounds	Outer bounds
+	Outline	Outline
+	Outline opacity	Outline opacity
+	Particle FX	Particle FX
+	Perimeter vertices	Perimeter vertices
+	Pivot	Pivot
+	Shadow	Shadow
+	Shadow opacity	Shadow opacity
+	Size mode	Size mode
+	Sync to Defold	Sync to Defold
+	Synced to Defold; save the GUI in Defold	Synced to Defold; save the GUI in Defold
+	Template	Template
+	Text	Text
+	Text leading	Text leading
+	Text tracking	Text tracking
+	X anchor	X anchor
+	Y anchor	Y anchor
+
+	Defold GUI Properties	Defold-GUI-Eigenschaften
+
+	Select a Defold GUI node to edit its properties	Wähle einen Defold-GUI-Knoten, um seine Eigenschaften zu bearbeiten
+	Defold Sync	Defold-Synchronisierung
+	Open a linked Defold GUI to synchronize	Verknüpfte Defold-GUI zum Synchronisieren öffnen
+	GUI resource	GUI-Ressource
+	Edits stay local until you sync	Änderungen bleiben bis zur Synchronisierung lokal
+	GUI nodes	GUI-Knoten

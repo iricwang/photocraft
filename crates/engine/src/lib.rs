@@ -35,6 +35,9 @@ pub mod color_to_alpha_cmds;
 pub mod commands;
 pub mod comps_cmds;
 pub mod cutout_cmds;
+pub mod defold_cmds;
+pub mod defold_design;
+pub mod defold_live;
 pub mod display_color;
 pub mod distort_cmds;
 pub mod document_preset_cmds;
@@ -356,6 +359,8 @@ impl Default for ToolState {
 
 #[derive(Default)]
 pub struct Session {
+    /// Defold documents have their own history and never masquerade as image documents.
+    pub gui: defold_cmds::GuiWorkspace,
     docs: Vec<DocState>,
     active: Option<usize>,
     pub tools: ToolState,
@@ -458,6 +463,7 @@ impl Session {
     }
     pub fn set_active(&mut self, index: usize) -> bool {
         if index < self.docs.len() {
+            self.gui.active = None;
             self.active = Some(index);
             self.sync_tools_mask_target();
             true
@@ -497,6 +503,7 @@ impl Session {
     /// Preserve its identity unless another open document already owns it.
     /// Identity-dependent callers must read the admitted document at the returned index.
     pub fn add_document(&mut self, mut doc: Document, path: Option<String>) -> usize {
+        self.gui.active = None;
         if !doc.ai_project.id.is_empty() && self.docs.iter().any(|st| st.doc.ai_project.id == doc.ai_project.id) {
             doc.ai_project.id.clear();
             doc.ai_project.record("project", "Opened a second copy; AI project identity will be linked independently");
@@ -525,7 +532,7 @@ impl Session {
             self.subject_cache.forget_doc(id);
         }
         let d = self.docs.remove(index);
-        self.active = if self.docs.is_empty() {
+        self.active = if self.docs.is_empty() || self.gui.active.is_some() {
             None
         } else {
             Some(match self.active {
@@ -586,12 +593,29 @@ impl Session {
 
     /// [`Self::disabled_reason`] for a call with `params`.
     pub fn disabled_reason_with(&self, id: &str, params: &Value) -> Option<String> {
+        if self.active_gui().is_some() {
+            let mapped = match id {
+                "edit.undo" => Some("defold.undo"),
+                "edit.redo" => Some("defold.redo"),
+                "layer.delete" => Some("defold.deleteNode"),
+                "layer.new.layer" => Some("defold.addNode"),
+                "layer.renameLayer" => Some("defold.renameNode"),
+                "file.close" => Some("defold.closeGui"),
+                _ => None,
+            };
+            if let Some(mapped) = mapped {
+                return self.disabled_reason_with(mapped, params);
+            }
+        }
         let Some(s) = commands::find(id) else { return Some(format!("unknown command `{id}`")) };
         self.precondition(s, &channel_cmds::inject_target(self, id, params.clone())).err().or_else(|| self.job_conflict(id, s.journal))
     }
 
     /// The command's own precondition for a call with `params` (their target filled in).
     fn precondition(&self, spec: &commands::CommandSpec, params: &Value) -> std::result::Result<(), String> {
+        if spec.id.starts_with("defold.") && !cfg!(feature = "defold-gui") {
+            return Err("Defold GUI integration is disabled in this build".into());
+        }
         if self.names_existing_layer(spec.id, params) {
             return Ok(());
         }

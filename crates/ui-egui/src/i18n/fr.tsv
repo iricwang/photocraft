@@ -3071,6 +3071,7 @@ curves	Smooth	Lisser
 	Use current layer as reference	Utiliser le calque actuel comme référence
 	Generate image	Générer une image
 	Generating image...	Génération de l’image...
+	Image fitted proportionally; original canvas remains visible outside the result.	Image ajustée proportionnellement ; la toile d’origine reste visible en dehors du résultat.
 	Generation cancelled	Génération annulée
 	Refresh models	Actualiser les modèles
 	Optimizing prompt...	Optimisation de la consigne...
@@ -3118,3 +3119,72 @@ curves	Smooth	Lisser
 	Generating	Génération en cours
 	Ready	Prêt
 	New document	Nouveau document
+
+	Save GUI	Enregistrer la GUI
+	Recover draft	Restaurer le brouillon
+	Reload textures	Recharger les textures
+	Close GUI	Fermer la GUI
+	Nodes	Nœuds
+	Return to GUI	Revenir à la GUI
+	Link selected layer	Lier le calque sélectionné
+	Use whole canvas	Utiliser tout le canevas
+	Publish to Defold	Publier dans Defold
+	Edit / generate node image	Modifier / générer l’image du nœud
+	Locate resource	Localiser la ressource
+	Show resource in folder	Afficher la ressource dans le dossier
+	Copy resource path	Copier le chemin de la ressource
+	Approximate preview · default layout · verify advanced effects in Defold	Aperçu approximatif · Disposition par défaut · Vérifier les effets avancés dans Defold
+	Scale X	Échelle X
+	Scale Y	Échelle Y
+	Defold Project…	Defold Project…
+	Defold Project	Defold Project
+	Project folder (game.project)	Project folder (game.project)
+	Connect Defold	Connect Defold
+	Sync paused	Sync paused
+	Live · Defold	Live · Defold
+	Add child	Add child
+	Add sibling below	Add sibling below
+	Add child node	Add child node
+	Defold saves all modified project resources. Continue?	Defold saves all modified project resources. Continue?
+	Approximate preview · waiting for Defold	Approximate preview · waiting for Defold
+	Refresh	Refresh
+	Open resource in Defold	Open resource in Defold
+	Add GUI node	Add GUI node
+	Adjust mode	Adjust mode
+	Clipping inverted	Clipping inverted
+	Clipping mode	Clipping mode
+	Clipping visible	Clipping visible
+	Fill angle	Fill angle
+	GUI and artwork synchronized	GUI and artwork synchronized
+	Id	Id
+	Inherit alpha	Inherit alpha
+	Inner radius	Inner radius
+	Line break	Line break
+	Material	Material
+	Nine slice	Nine slice
+	Outer bounds	Outer bounds
+	Outline	Outline
+	Outline opacity	Outline opacity
+	Particle FX	Particle FX
+	Perimeter vertices	Perimeter vertices
+	Pivot	Pivot
+	Shadow	Shadow
+	Shadow opacity	Shadow opacity
+	Size mode	Size mode
+	Sync to Defold	Sync to Defold
+	Synced to Defold; save the GUI in Defold	Synced to Defold; save the GUI in Defold
+	Template	Template
+	Text	Text
+	Text leading	Text leading
+	Text tracking	Text tracking
+	X anchor	X anchor
+	Y anchor	Y anchor
+
+	Defold GUI Properties	Propriétés GUI Defold
+
+	Select a Defold GUI node to edit its properties	Sélectionnez un nœud GUI Defold pour modifier ses propriétés
+	Defold Sync	Synchronisation Defold
+	Open a linked Defold GUI to synchronize	Ouvrez une GUI Defold liée pour synchroniser
+	GUI resource	Ressource GUI
+	Edits stay local until you sync	Les modifications restent locales jusqu’à la synchronisation
+	GUI nodes	Nœuds GUI

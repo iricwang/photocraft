@@ -65,6 +65,8 @@ pub mod crop_shield;
 pub mod crop_size;
 pub mod crop_straighten;
 pub mod crop_ui;
+mod defold_design_ui;
+mod defold_ui;
 pub mod delete_layer_prompt;
 pub mod dialog_blend_ui;
 pub mod dialogs;
@@ -1051,7 +1053,14 @@ impl PhotocraftApp {
         }
         self.canvases.retain(|(doc, _), _| ids.contains(doc));
         self.navigator_textures.retain(|doc, _| ids.contains(doc));
+        let new_gui = self.session.documents().iter().any(|st| st.doc.defold.is_some() && !self.view_docs.contains(&st.doc.id));
         self.view_docs = ids;
+        if new_gui && let Err(error) = crate::panel_docking::open_defold_properties(self) {
+            self.ui.status = error;
+        }
+        if new_gui && let Err(error) = crate::panel_docking::open_defold_sync(self) {
+            self.ui.status = error;
+        }
         self.prune_thumbs();
         self.sync_mask_targets();
         // Channel-view textures outlive a hidden view (cheap re-show), not their document.
@@ -1123,7 +1132,8 @@ impl PhotocraftApp {
         }
         let import = self.services.import.as_ref().ok_or("no importer configured")?;
         let max_svg_group_depth = self.session.prefs().file_handling.rasterize_svg_groups_deeper_than as usize;
-        let (doc, warnings) = import(name, bytes, max_svg_group_depth)?;
+        let (mut doc, mut warnings) = import(name, bytes, max_svg_group_depth)?;
+        warnings.extend(photocraft_engine::defold_design::prepare_open(&mut doc).map_err(|e| e.to_string())?);
         // Edit › Color Settings policies apply on open; mismatches can ask what to do.
         // No path yet: a bare name isn't a location to save back to (`open_file` sets the path).
         let (_, color) = self.session.open_document(doc, None);
@@ -1196,6 +1206,12 @@ impl PhotocraftApp {
     /// [`Self::save_as`], writing a Targa with `tga_bits` per pixel when given (no Targa Options
     /// prompt): `file.save` and `file.saveAs` with `tgaBits`.
     pub fn save_as_with(&mut self, path: Option<String>, tga_bits: Option<photocraft_io::TgaBits>) -> Result<Value, String> {
+        if self.session.active_gui().is_some() {
+            if path.is_some() {
+                return Err("GUI Save As is not supported yet; Save writes the original resource".into());
+            }
+            return self.run("defold.saveGui", serde_json::json!({}));
+        }
         if self.save_options_open() {
             return Err("Answer TIFF or Targa Options before starting another save".into());
         }
@@ -1672,13 +1688,21 @@ impl eframe::App for PhotocraftApp {
             panels::title_bar(self, ui);
         }
         if chrome && self.ui.panels.options_bar {
-            panels::options_bar(self, ui);
+            if self.session.active_gui().is_some() {
+                defold_ui::options(self, ui);
+            } else {
+                panels::options_bar(self, ui);
+            }
         }
         if chrome && self.ui.panels.status_bar {
             panels::status_bar(self, ui);
         }
         if chrome && self.ui.panels.toolbar {
-            panels::toolbar(self, ui);
+            if self.session.active_gui().is_some() {
+                defold_ui::toolbar(self, ui);
+            } else {
+                panels::toolbar(self, ui);
+            }
         }
         if chrome && self.ui.panels.dock {
             panels::right_dock(self, ui);
@@ -1686,11 +1710,18 @@ impl eframe::App for PhotocraftApp {
         let t = theme::Tokens::get(&ctx);
         let backdrop = if chrome { prefs_ui::pasteboard_color(self).unwrap_or(t.canvas) } else { egui::Color32::BLACK };
         egui::CentralPanel::default().frame(egui::Frame::NONE.fill(backdrop)).show(ui, |ui| {
-            canvas::document_area(self, ui);
+            defold_ui::tabs(self, ui);
+            if self.session.active_gui().is_some() {
+                defold_ui::document(self, ui);
+            } else {
+                canvas::document_area(self, ui);
+            }
         });
         if chrome {
             ai_panel::show(self, ui);
         }
+        defold_ui::project_window(self, &ctx);
+        defold_ui::poll(self, &ctx);
         panels::properties_window(self, &ctx);
         brush_panel::window(self, &ctx);
         preset_panels::windows(self, &ctx);
@@ -1703,6 +1734,7 @@ impl eframe::App for PhotocraftApp {
         dialogs::show(self, &ctx);
         jobs_ui::dialog(self, &ctx);
         discard_ui::show(self, &ctx);
+        defold_ui::close_prompt(self, &ctx);
         tiff_options_ui::show(self, &ctx);
         targa_options_ui::show(self, &ctx);
         distort_ui::show(self, &ctx);

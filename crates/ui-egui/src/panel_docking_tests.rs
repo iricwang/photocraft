@@ -7,6 +7,90 @@ fn app() -> PhotocraftApp {
 }
 
 #[test]
+fn short_defold_sync_panel_keeps_primary_action_at_the_top() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("game.project"), "[display]\nwidth=96\nheight=96\n").unwrap();
+    let gui = dir.path().join("test.gui");
+    std::fs::write(&gui, "nodes {id:\"panel\" size {x:32 y:16}}").unwrap();
+    let mut app = app();
+    app.open_file(gui.to_str().unwrap(), &[]).unwrap();
+    let mut ready = false;
+    let mut h = Harness::builder().with_size(vec2(240.0, 90.0)).build_ui_state(move |ui, app| {
+        if !ready {
+            PhotocraftApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
+            ready = true;
+            return;
+        }
+        crate::defold_design_ui::sync_panel(app, ui);
+    }, app);
+    h.run_steps(4);
+    let button = h.get_by_label("Sync to Defold");
+    assert!(button.rect().bottom() <= 50.0, "resource details must not push sync below a short dock's visible area");
+}
+
+#[test]
+fn defold_sync_floats_resizes_docks_and_remembers_its_closed_position() {
+    let mut app = app();
+    app.run("window.panel.defoldSync", json!({})).unwrap();
+    let layout = app.ui.docking.as_ref().unwrap();
+    assert!(layout.floating.iter().any(|f| f.panels == ["defoldSync"]));
+    assert!(app.ui.panels.defold_sync);
+    app.run("window.panel.float", json!({"panel":"defoldSync","x":120,"y":180,"width":260,"height":360})).unwrap();
+    let floating = app.ui.docking.clone().unwrap();
+    assert!(floating.floating.iter().any(|f| f.panels == ["defoldSync"] && f.rect == [120.0,180.0,260.0,360.0]));
+    app.run("window.panel.close", json!({"panel":"defoldSync"})).unwrap();
+    app.run("window.panel.defoldSync", json!({})).unwrap();
+    assert_eq!(app.ui.docking, Some(floating));
+    app.run("window.panel.move", json!({"panel":"defoldSync","anchor":"layers","zone":"top"})).unwrap();
+    let docked = app.ui.docking.clone();
+    app.run("window.panel.close", json!({"panel":"defoldSync"})).unwrap();
+    app.run("window.panel.defoldSync", json!({})).unwrap();
+    assert_eq!(app.ui.docking, docked);
+    let restored: crate::state::UiState = serde_json::from_value(serde_json::to_value(&app.ui).unwrap()).unwrap();
+    assert_eq!(restored.docking, docked);
+}
+
+#[test]
+fn defold_properties_shares_native_tabs_and_can_dock_and_reopen_independently() {
+    let mut app = app();
+    let before = legacy(&app);
+    open_defold_properties(&mut app).unwrap();
+    let layout = app.ui.docking.as_ref().unwrap();
+    assert_eq!(group_members(layout, "properties"), ["properties", "adjustments", "defoldProperties"]);
+    assert_eq!(layout.floating, before.floating);
+    assert!(app.ui.panels.properties && app.ui.panels.defold_properties);
+    app.run("window.panel.move", json!({"panel":"defoldProperties","anchor":"layers","zone":"top"})).unwrap();
+    let docked = app.ui.docking.clone().unwrap();
+    assert!(group_members(&docked, "properties").iter().all(|id| id != "defoldProperties"));
+    app.run("window.panel.close", json!({"panel":"defoldProperties"})).unwrap();
+    assert!(app.ui.panels.properties && !app.ui.panels.defold_properties);
+    app.run("window.panel.defoldProperties", json!({})).unwrap();
+    assert_eq!(app.ui.docking.as_ref().unwrap().location(&"defoldProperties".into()).unwrap(), docked.location(&"defoldProperties".into()).unwrap());
+    let saved = serde_json::to_value(&app.ui).unwrap();
+    let restored: crate::state::UiState = serde_json::from_value(saved).unwrap();
+    assert_eq!(restored.docking, app.ui.docking);
+}
+
+#[test]
+fn gui_open_reveals_defold_panel_without_changing_native_property_selection() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("game.project"), "[display]\nwidth=160\nheight=80\n").unwrap();
+    let gui = dir.path().join("test.gui");
+    std::fs::write(&gui, "nodes {id:\"panel\" size {x:32 y:16}}").unwrap();
+    let mut app = app();
+    app.ui.dock_tabs.properties = 1;
+    app.open_file(gui.to_str().unwrap(), &[]).unwrap();
+    assert_eq!(app.ui.dock_tabs.properties, 1);
+    assert!(app.ui.panels.defold_properties);
+    assert!(app.ui.panels.defold_sync);
+    app.run("window.panel.close", json!({"panel":"defoldSync"})).unwrap();
+    app.run("window.panel.close", json!({"panel":"defoldProperties"})).unwrap();
+    app.sync_views();
+    assert!(!app.ui.panels.defold_properties, "ordinary redraw must not reopen a closed panel");
+    assert!(!app.ui.panels.defold_sync);
+}
+
+#[test]
 fn model_settings_visibility_is_independent_of_ai_and_does_not_promote_the_main_dock() {
     let mut app = app();
     assert!(!ai_settings_shown(&app));

@@ -52,6 +52,10 @@ pub struct DocM {
     pub ai_generations: Vec<GenerationGroupM>,
     #[serde(default)]
     pub ai_project: ProjectMemoryM,
+    #[serde(default)]
+    pub design_source_id: Option<String>,
+    #[serde(default)]
+    pub defold: Option<photocraft_doc::defold::Design>,
     pub global_light: GlobalLight,
     /// Saved paths (Paths panel).
     #[serde(default)]

@@ -3680,6 +3680,7 @@ curves	Smooth	スムーズ
 	Use current layer as reference	現在のレイヤーを参照画像に使用
 	Generate image	画像を生成
 	Generating image...	画像を生成中...
+	Image fitted proportionally; original canvas remains visible outside the result.	画像の縦横比を維持して配置しました。結果の外側には元のキャンバスが表示されます。
 	Generation cancelled	生成をキャンセルしました
 	Refresh models	モデルを更新
 	Optimizing prompt...	プロンプトを最適化中...
@@ -3726,3 +3727,71 @@ curves	Smooth	スムーズ
 	Generation details	生成の詳細
 	Generating	生成中
 	Ready	準備完了
+
+	Save GUI	GUI を保存
+	Recover draft	下書きを復元
+	Reload textures	テクスチャを再読み込み
+	Close GUI	GUI を閉じる
+	Nodes	ノード
+	Return to GUI	GUI に戻る
+	Link selected layer	選択レイヤーをリンク
+	Use whole canvas	キャンバス全体を使用
+	Publish to Defold	Defold に公開
+	Edit / generate node image	ノード画像を編集／生成
+	Locate resource	リソースを探す
+	Show resource in folder	リソースをフォルダーに表示
+	Copy resource path	リソースのパスをコピー
+	Approximate preview · default layout · verify advanced effects in Defold	概略プレビュー · 既定のレイアウト · 高度な効果は Defold で確認
+	Scale X	X 方向の拡大率
+	Scale Y	Y 方向の拡大率
+	Defold Project…	Defold Project…
+	Defold Project	Defold Project
+	Project folder (game.project)	Project folder (game.project)
+	Connect Defold	Connect Defold
+	Sync paused	Sync paused
+	Live · Defold	Live · Defold
+	Add child	Add child
+	Add sibling below	Add sibling below
+	Add child node	Add child node
+	Defold saves all modified project resources. Continue?	Defold saves all modified project resources. Continue?
+	Approximate preview · waiting for Defold	Approximate preview · waiting for Defold
+	Refresh	Refresh
+	Open resource in Defold	Open resource in Defold
+	Add GUI node	Add GUI node
+	Adjust mode	Adjust mode
+	Clipping inverted	Clipping inverted
+	Clipping mode	Clipping mode
+	Clipping visible	Clipping visible
+	Fill angle	Fill angle
+	GUI and artwork synchronized	GUI and artwork synchronized
+	Id	Id
+	Inherit alpha	Inherit alpha
+	Inner radius	Inner radius
+	Line break	Line break
+	Material	Material
+	Nine slice	Nine slice
+	Outer bounds	Outer bounds
+	Outline	Outline
+	Outline opacity	Outline opacity
+	Particle FX	Particle FX
+	Perimeter vertices	Perimeter vertices
+	Pivot	Pivot
+	Shadow opacity	Shadow opacity
+	Size mode	Size mode
+	Sync to Defold	Sync to Defold
+	Synced to Defold; save the GUI in Defold	Synced to Defold; save the GUI in Defold
+	Template	Template
+	Text	Text
+	Text leading	Text leading
+	Text tracking	Text tracking
+	X anchor	X anchor
+	Y anchor	Y anchor
+
+	Defold GUI Properties	Defold GUI プロパティ
+
+	Select a Defold GUI node to edit its properties	プロパティを編集する Defold GUI ノードを選択してください
+	Defold Sync	Defold 同期
+	Open a linked Defold GUI to synchronize	リンクされた Defold GUI を開いて同期
+	GUI resource	GUI リソース
+	Edits stay local until you sync	同期するまで変更はローカルに保持されます
+	GUI nodes	GUI ノード

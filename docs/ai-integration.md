@@ -31,6 +31,39 @@ calling an image provider. `ai.configure` exposes `enabled` and `visible` indepe
 
 ## User Reference Images
 
+### Aspect-Preserving Placement And Reference Intent
+
+Updated 2026-10-14. Whole-image repaint results use one uniform scale and are centered inside
+the original canvas. A mismatching output ratio never stretches, crops, resizes the document,
+or starts another generation. New AI layers leave uncovered margins transparent; candidate
+edits preserve the original pixels there. Selected repaint results keep the square-context
+contract and selection mapping, including feathering. Isolated components keep their existing
+alpha-aware fitting. Receive receipts expose `placement.fit`, `sourceSize`, `hasMargins`, and `bounds`
+(`[x, y, width, height]` in original document pixels); history retains the original target area.
+No automatic crop/fill decision is inferred when the user asks for another output ratio.
+The completion message explicitly warns when the original canvas remains visible around a
+fitted result. This is lossless placement, not a guarantee of a seamless replacement: source
+headers or footers can remain visible in those margins.
+
+Both Codex roles receive a shared edit-intent policy in the acknowledged developer item.
+The agent interprets the current request to distinguish source artwork from composition,
+style and object references. A reference does not automatically supply all three. It separates
+requested changes from requested preservation using the inspected source and current user
+words, without inventing style directions, unseen interaction behavior, or permanent layout
+locks. Explicit latest requests override previous assumptions. The raw user message is not
+rewritten. Only input-role, user-requested preservation, target geometry and output notes may
+be clarified for the image tool; this is not a hidden aesthetic prompt optimizer.
+
+An unresolved essential conflict is returned as a concise question without an image call.
+PhotoCraft now displays the actual text-only agent reply instead of guessing that quota is
+missing. It does not retry, fork, archive or change the persisted conversation. Semantic
+interpretation is model-driven, not a deterministic classifier: offline policy and protocol
+tests verify delivery, not visual accuracy. A new paid comparison needs explicit approval.
+
+The opt-in engine test `replay_existing_image_with_aspect_preserving_placement` reads a local
+PSD and an already-generated image, saves a separate composite for visual inspection and
+asserts the PSD is unchanged. It never connects to a model or consumes generation quota.
+
 Codex user messages no longer append the serialized project summary, layer lists, operation
 history or old failure messages on every turn. Normal generation sends the user's original
 text, one short label per actual reference image, the typed images and a typed Imagegen skill
@@ -51,11 +84,35 @@ depends on existing artwork or asks to preserve its elements/style/layout, the a
 `canvas_snapshot` before generation or asking the user for missing target pixels. Unrelated
 new images and reference-only standalone assets do not trigger that read. Only an unavailable
 or failed tool justifies requesting a screenshot, with that failure explained. This policy is
-shared by the MCP server instructions and thread setup, not appended to the user's message.
-The mock-provider bridge probe verifies the policy reaches the inference request and drives an
+shared by the MCP server instructions, thread setup and each generation turn, not appended to
+the user's message. Persisted conversations can retain their original developer message even
+after a resume with new settings. Both renderer and asset director therefore send current task
+instructions as a developer message using `thread/inject_items` and wait for acknowledgement
+before `turn/start`. A rejected/malformed acknowledgement, cancellation or concurrent turn
+prevents generation. `collaborationMode.settings.developer_instructions` is also set consistently,
+but is not sufficient by itself: the real persisted conversation retained stale instructions
+when its mode stayed `default`. The selected model and reasoning effort are preserved. This is
+an append to the original conversation, not a new conversation, automatic image attachment, or
+generation retry. See
+the [App Server turn contract](https://learn.chatgpt.com/docs/app-server#turns).
+The mock-provider bridge probe verifies the policy appears in model-visible developer messages
+when continuing a conversation with legacy instructions (not merely the MCP catalog), and drives an
 actual MCP call, then checks the next model request contains a typed image that was absent before
 the call. This proves transport/tool execution, not a real model's choice to call the tool.
 Server-level workflow instructions follow the [OpenAI MCP server guidance](https://developers.openai.com/plugins/build/mcp-server).
+
+Real acceptance (2026-10-14): one explicitly approved image-generation turn used the original
+saved PSD, its embedded reference, unchanged user prompt and original conversation. The agent
+called `canvas_snapshot`; the model-visible result contained the exact source PNG (matching
+SHA-256), then Imagegen was invoked with both images. No retry, fork or PSD write occurred.
+The generated artwork retained recognizable source elements, but changed the four-column
+card battle into a three-column perspective arrangement; input transport passing does not
+certify visual fidelity. The read-only PSD harness does not validate unsaved UI state or import.
+`scripts/verify_existing_canvas.py --audit-only --out <receipt-dir> --rollout <original-rollout>`
+checks this evidence without model calls. MCP summary events can omit image blocks even when
+raw model-visible tool outputs contain them; acceptance must audit the latter. The opt-in
+`codex_real_existing_canvas_acceptance` test requires explicit approval and refuses a second
+submission in the same output directory. Private PSD/reference/result files remain untracked.
 
 The floating prompt's image button offers **Choose reference image** and **Paste reference
 image**. Ctrl/Cmd+V with focus in the prompt attaches an image; ordinary text paste stays text.

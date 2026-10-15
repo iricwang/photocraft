@@ -233,12 +233,10 @@ impl PhotocraftApp {
     /// Complete a deferred operation on its requesting document without stealing the selected
     /// tab. Restore by ID as script events can close or reorder documents during a save.
     pub(crate) fn with_document<T>(&mut self, id: DocId, run: impl FnOnce(&mut Self) -> Result<T, String>) -> Result<T, String> {
-        let active = self.session.active().map(|d| d.doc.id);
+        let active = self.session.focus();
         self.refocus(id)?;
         let result = run(self);
-        if let Some(active) = active {
-            let _ = self.refocus(active);
-        }
+        self.session.restore_focus(&active);
         result
     }
 

@@ -14,6 +14,7 @@ pub mod ai;
 pub mod analysis;
 pub mod blend_if;
 pub mod comps;
+pub mod defold;
 pub mod effects;
 pub mod mode;
 pub mod pattern;
@@ -840,6 +841,10 @@ pub struct Document {
     pub ai_generations: Vec<ai::GenerationGroup>,
     /// Embedded reference images and portable AI conversation/operation memory.
     pub ai_project: ai::ProjectMemory,
+    /// Stable editable-source identity for external resource bindings; independent of AI sessions.
+    pub design_source_id: Option<String>,
+    /// Linked GUI artwork uses this same document, layer tree and history.
+    pub defold: Option<defold::Design>,
     /// Global light used by layer effects (PSD resources 1037/1049).
     pub global_light: GlobalLight,
     /// Saved paths (Paths panel), top to bottom.
@@ -902,6 +907,8 @@ impl Document {
             metadata: Metadata::default(),
             ai_generations: Vec::new(),
             ai_project: ai::ProjectMemory::default(),
+            design_source_id: None,
+            defold: None,
             global_light: GlobalLight::default(),
             paths: Vec::new(),
             work_path: None,

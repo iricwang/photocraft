@@ -253,6 +253,8 @@ pub(crate) fn doc_m(d: &Document, sink: &mut dyn Sink) -> DocM {
                 versions: g.versions.clone(),
             })
             .collect(),
+        design_source_id: d.design_source_id.clone(),
+        defold: d.defold.clone(),
         ai_project: ProjectMemoryM {
             id: d.ai_project.id.clone(),
             references: d.ai_project.references.iter().map(|r| ProjectReferenceM { id: r.id, name: r.name.clone(), png: sink.blob(&r.png) }).collect(),
@@ -705,6 +707,8 @@ impl Loader<'_> {
             metadata: md,
             ai_generations,
             ai_project,
+            design_source_id: m.design_source_id.clone(),
+            defold: m.defold.clone(),
             global_light: m.global_light,
             paths,
             work_path: m.work_path.clone(),

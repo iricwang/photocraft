@@ -2674,6 +2674,7 @@ curves	Smooth	平滑
 	Use current layer as reference	以当前图层为参考
 	Generate image	生成图片
 	Generating image...	正在生成图片...
+	Image fitted proportionally; original canvas remains visible outside the result.	图片已等比回贴；未覆盖区域仍显示原画布。
 	Generation cancelled	生成已取消
 	Codex model (automatic if empty)	Codex 模型（留空自动选择）
 	Refresh models	刷新模型
@@ -2730,3 +2731,71 @@ curves	Smooth	平滑
 	Generating	生成中
 	Ready	就绪
 	New document	新建文档
+
+	Save GUI	保存 GUI
+	Recover draft	恢复草稿
+	Reload textures	刷新贴图
+	Close GUI	关闭 GUI
+	Nodes	节点
+	Return to GUI	返回 GUI
+	Link selected layer	链接所选图层
+	Use whole canvas	使用可见画布
+	Publish to Defold	发布到 Defold
+	Edit / generate node image	编辑／生成节点素材
+	Locate resource	定位素材
+	Show resource in folder	在文件夹中显示素材
+	Copy resource path	复制素材路径
+	Approximate preview · default layout · verify advanced effects in Defold	近似预览 · 默认布局 · 高级效果请在 Defold 中核对
+	Scale X	水平缩放
+	Scale Y	垂直缩放
+	Defold Project…	Defold 项目…
+	Defold Project	Defold 项目
+	Project folder (game.project)	项目目录（game.project）
+	Connect Defold	连接 Defold
+	Sync paused	同步已暂停
+	Live · Defold	实时 · Defold
+	Add child	添加子节点
+	Add sibling below	在下方添加同级节点
+	Add child node	添加子节点
+	Defold saves all modified project resources. Continue?	Defold 将保存项目中所有已修改资源，是否继续？
+	Approximate preview · waiting for Defold	近似预览 · 等待 Defold 画面
+	Refresh	刷新
+	Open resource in Defold	在 Defold 中打开素材
+	Add GUI node	添加 GUI 节点
+	Adjust mode	适配模式
+	Clipping inverted	反向裁剪
+	Clipping mode	裁剪模式
+	Clipping visible	裁剪可见
+	Fill angle	填充角度
+	GUI and artwork synchronized	GUI 与素材已同步
+	Id	Id
+	Inherit alpha	继承透明度
+	Inner radius	内半径
+	Line break	换行
+	Material	材质
+	Nine slice	九宫格
+	Outer bounds	外边界
+	Outline	轮廓
+	Outline opacity	轮廓透明度
+	Particle FX	粒子特效
+	Perimeter vertices	周长顶点数
+	Pivot	Pivot
+	Shadow	阴影
+	Shadow opacity	阴影透明度
+	Size mode	尺寸模式
+	Sync to Defold	同步到 Defold
+	Synced to Defold; save the GUI in Defold	已同步到 Defold，请在 Defold 中保存 GUI
+	Template	模板
+	Text	文本
+	Text leading	文本行距
+	Text tracking	文本字距
+	X anchor	X 锚点
+	Y anchor	Y 锚点
+
+	Defold GUI Properties	Defold GUI 属性
+	Select a Defold GUI node to edit its properties	选择 Defold GUI 节点以编辑其属性
+	Defold Sync	Defold 同步
+	Open a linked Defold GUI to synchronize	打开关联的 Defold GUI 后即可同步
+	GUI resource	GUI 资源
+	Edits stay local until you sync	编辑保留在本地，点击同步后更新 Defold
+	GUI nodes	GUI 节点

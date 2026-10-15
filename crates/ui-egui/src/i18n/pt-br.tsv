@@ -3860,6 +3860,7 @@ layerLabel	No Color	Sem cor
 	Use current layer as reference	Usar camada atual como referência
 	Generate image	Gerar imagem
 	Generating image...	Gerando imagem...
+	Image fitted proportionally; original canvas remains visible outside the result.	Imagem ajustada proporcionalmente; a tela original permanece visível fora do resultado.
 	Generation cancelled	Geração cancelada
 	Refresh models	Atualizar modelos
 	Optimizing prompt...	Otimizando prompt...
@@ -3904,3 +3905,71 @@ layerLabel	No Color	Sem cor
 	AI disabled	IA desativada
 	Generation details	Detalhes da geração
 	Generating	Gerando
+
+	Save GUI	Salvar GUI
+	Recover draft	Recuperar rascunho
+	Reload textures	Recarregar texturas
+	Close GUI	Fechar GUI
+	Nodes	Nós
+	Return to GUI	Voltar à GUI
+	Link selected layer	Vincular camada selecionada
+	Use whole canvas	Usar toda a tela
+	Publish to Defold	Publicar no Defold
+	Edit / generate node image	Editar / gerar imagem do nó
+	Locate resource	Localizar recurso
+	Show resource in folder	Mostrar recurso na pasta
+	Copy resource path	Copiar caminho do recurso
+	Approximate preview · default layout · verify advanced effects in Defold	Prévia aproximada · Layout padrão · Verifique efeitos avançados no Defold
+	Scale X	Escala X
+	Scale Y	Escala Y
+	Defold Project…	Defold Project…
+	Defold Project	Defold Project
+	Project folder (game.project)	Project folder (game.project)
+	Connect Defold	Connect Defold
+	Sync paused	Sync paused
+	Live · Defold	Live · Defold
+	Add child	Add child
+	Add sibling below	Add sibling below
+	Add child node	Add child node
+	Defold saves all modified project resources. Continue?	Defold saves all modified project resources. Continue?
+	Approximate preview · waiting for Defold	Approximate preview · waiting for Defold
+	Refresh	Refresh
+	Open resource in Defold	Open resource in Defold
+	Add GUI node	Add GUI node
+	Adjust mode	Adjust mode
+	Clipping inverted	Clipping inverted
+	Clipping mode	Clipping mode
+	Clipping visible	Clipping visible
+	Fill angle	Fill angle
+	GUI and artwork synchronized	GUI and artwork synchronized
+	Id	Id
+	Inherit alpha	Inherit alpha
+	Inner radius	Inner radius
+	Line break	Line break
+	Material	Material
+	Nine slice	Nine slice
+	Outer bounds	Outer bounds
+	Outline	Outline
+	Outline opacity	Outline opacity
+	Particle FX	Particle FX
+	Perimeter vertices	Perimeter vertices
+	Pivot	Pivot
+	Shadow opacity	Shadow opacity
+	Size mode	Size mode
+	Sync to Defold	Sync to Defold
+	Synced to Defold; save the GUI in Defold	Synced to Defold; save the GUI in Defold
+	Template	Template
+	Text	Text
+	Text leading	Text leading
+	Text tracking	Text tracking
+	X anchor	X anchor
+	Y anchor	Y anchor
+
+	Defold GUI Properties	Propriedades da GUI Defold
+
+	Select a Defold GUI node to edit its properties	Selecione um nó GUI Defold para editar suas propriedades
+	Defold Sync	Sincronização do Defold
+	Open a linked Defold GUI to synchronize	Abra uma GUI do Defold vinculada para sincronizar
+	GUI resource	Recurso GUI
+	Edits stay local until you sync	As alterações ficam locais até a sincronização
+	GUI nodes	Nós GUI

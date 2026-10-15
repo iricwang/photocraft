@@ -3830,6 +3830,7 @@ curves	Smooth	Vloeiend maken
 	Use current layer as reference	Huidige laag als referentie gebruiken
 	Generate image	Afbeelding genereren
 	Generating image...	Afbeelding genereren...
+	Image fitted proportionally; original canvas remains visible outside the result.	Afbeelding proportioneel ingepast; buiten het resultaat blijft het oorspronkelijke canvas zichtbaar.
 	Generation cancelled	Genereren geannuleerd
 	Refresh models	Modellen vernieuwen
 	Optimizing prompt...	Prompt optimaliseren...
@@ -3874,3 +3875,71 @@ curves	Smooth	Vloeiend maken
 	AI disabled	AI uitgeschakeld
 	Generation details	Generatiedetails
 	Generating	Bezig met genereren
+
+	Save GUI	GUI opslaan
+	Recover draft	Concept herstellen
+	Reload textures	Texturen opnieuw laden
+	Close GUI	GUI sluiten
+	Nodes	Knooppunten
+	Return to GUI	Terug naar GUI
+	Link selected layer	Geselecteerde laag koppelen
+	Use whole canvas	Hele canvas gebruiken
+	Publish to Defold	Publiceren in Defold
+	Edit / generate node image	Knooppuntafbeelding bewerken / genereren
+	Locate resource	Bron zoeken
+	Show resource in folder	Bron in map tonen
+	Copy resource path	Bronpad kopiëren
+	Approximate preview · default layout · verify advanced effects in Defold	Benaderende voorvertoning · Standaardindeling · Controleer geavanceerde effecten in Defold
+	Scale X	Schaal X
+	Scale Y	Schaal Y
+	Defold Project…	Defold Project…
+	Defold Project	Defold Project
+	Project folder (game.project)	Project folder (game.project)
+	Connect Defold	Connect Defold
+	Sync paused	Sync paused
+	Live · Defold	Live · Defold
+	Add child	Add child
+	Add sibling below	Add sibling below
+	Add child node	Add child node
+	Defold saves all modified project resources. Continue?	Defold saves all modified project resources. Continue?
+	Approximate preview · waiting for Defold	Approximate preview · waiting for Defold
+	Refresh	Refresh
+	Open resource in Defold	Open resource in Defold
+	Add GUI node	Add GUI node
+	Adjust mode	Adjust mode
+	Clipping inverted	Clipping inverted
+	Clipping mode	Clipping mode
+	Clipping visible	Clipping visible
+	Fill angle	Fill angle
+	GUI and artwork synchronized	GUI and artwork synchronized
+	Id	Id
+	Inherit alpha	Inherit alpha
+	Inner radius	Inner radius
+	Line break	Line break
+	Material	Material
+	Nine slice	Nine slice
+	Outer bounds	Outer bounds
+	Outline	Outline
+	Outline opacity	Outline opacity
+	Particle FX	Particle FX
+	Perimeter vertices	Perimeter vertices
+	Pivot	Pivot
+	Shadow opacity	Shadow opacity
+	Size mode	Size mode
+	Sync to Defold	Sync to Defold
+	Synced to Defold; save the GUI in Defold	Synced to Defold; save the GUI in Defold
+	Template	Template
+	Text	Text
+	Text leading	Text leading
+	Text tracking	Text tracking
+	X anchor	X anchor
+	Y anchor	Y anchor
+
+	Defold GUI Properties	Defold-GUI-eigenschappen
+
+	Select a Defold GUI node to edit its properties	Selecteer een Defold-GUI-knooppunt om de eigenschappen te bewerken
+	Defold Sync	Defold-synchronisatie
+	Open a linked Defold GUI to synchronize	Open een gekoppelde Defold-GUI om te synchroniseren
+	GUI resource	GUI-resource
+	Edits stay local until you sync	Wijzigingen blijven lokaal totdat je synchroniseert
+	GUI nodes	GUI-knooppunten

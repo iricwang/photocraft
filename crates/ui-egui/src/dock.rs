@@ -32,6 +32,10 @@ pub enum Group {
     Properties,
     /// Model configuration, initially tucked into the right icon rail.
     AiSettings,
+    /// GUI node properties, independent of native layer properties.
+    DefoldProperties,
+    /// Manual publication controls for linked GUI documents.
+    DefoldSync,
     /// Character | Paragraph (not in the default workspace; Window › Character opens it, #150).
     Character,
     /// Navigator | Histogram | Info.
@@ -44,13 +48,16 @@ pub enum Group {
 
 impl Group {
     /// Photoshop Essentials order, top to bottom.
-    pub const ALL: [Group; 7] = [Group::Color, Group::Properties, Group::AiSettings, Group::Character, Group::Navigator, Group::History, Group::Layers];
+    pub const ALL: [Group; 9] =
+        [Group::Color, Group::Properties, Group::DefoldProperties, Group::DefoldSync, Group::AiSettings, Group::Character, Group::Navigator, Group::History, Group::Layers];
 
     pub fn key(self) -> &'static str {
         match self {
             Group::Color => "color",
             Group::Properties => "properties",
             Group::AiSettings => "aiSettings",
+            Group::DefoldProperties => "defoldProperties",
+            Group::DefoldSync => "defoldSync",
             Group::Character => "character",
             Group::Navigator => "navigator",
             Group::History => "history",
@@ -65,6 +72,8 @@ impl Group {
             Group::Color => 190.0,
             Group::Properties => 250.0,
             Group::AiSettings => 220.0,
+            Group::DefoldProperties => 420.0,
+            Group::DefoldSync => 280.0,
             Group::Character => 270.0,
             Group::Navigator => 210.0,
             Group::History => 200.0,
@@ -79,6 +88,8 @@ impl Group {
             Group::Color => 130.0,
             Group::Properties => 160.0,
             Group::AiSettings => 180.0,
+            Group::DefoldProperties => 220.0,
+            Group::DefoldSync => 180.0,
             Group::Character => 160.0,
             Group::Navigator => 140.0,
             Group::History => 130.0,
@@ -110,6 +121,8 @@ impl Group {
             Group::Color => &["Swatches", "Color", "Gradients", "Patterns"],
             Group::Properties => &["Properties", "Adjustments"],
             Group::AiSettings => &["Model settings"],
+            Group::DefoldProperties => &["Defold GUI Properties"],
+            Group::DefoldSync => &["Defold Sync"],
             Group::Character => &["Character", "Paragraph"],
             Group::Navigator => &["Navigator", "Histogram", "Info"],
             Group::History => &["History", "Actions", "Layer Comps"],
@@ -128,6 +141,8 @@ impl Group {
             Group::Color => &mut tabs.color,
             Group::Properties => &mut tabs.properties,
             Group::AiSettings => &mut tabs.ai_settings,
+            Group::DefoldProperties => &mut tabs.defold_properties,
+            Group::DefoldSync => &mut tabs.defold_sync,
             Group::Character => &mut tabs.character,
             Group::Navigator => &mut tabs.navigator,
             Group::History => &mut tabs.history,
@@ -145,6 +160,8 @@ impl Group {
             Group::Color => panels.color,
             Group::Properties => panels.properties,
             Group::AiSettings => panels.ai_settings,
+            Group::DefoldProperties => panels.defold_properties,
+            Group::DefoldSync => panels.defold_sync,
             Group::Character => panels.character,
             Group::Navigator => panels.navigator,
             Group::History => panels.history,
@@ -157,6 +174,8 @@ impl Group {
             Group::Color => &mut panels.color,
             Group::Properties => &mut panels.properties,
             Group::AiSettings => &mut panels.ai_settings,
+            Group::DefoldProperties => &mut panels.defold_properties,
+            Group::DefoldSync => &mut panels.defold_sync,
             Group::Character => &mut panels.character,
             Group::Navigator => &mut panels.navigator,
             Group::History => &mut panels.history,

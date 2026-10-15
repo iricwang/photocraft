@@ -3768,6 +3768,7 @@ curves	Smooth	Εξομάλυνση
 	Use current layer as reference	Τρέχουσα στρώση ως αναφορά
 	Generate image	Δημιουργία εικόνας
 	Generating image...	Δημιουργία εικόνας...
+	Image fitted proportionally; original canvas remains visible outside the result.	Η εικόνα προσαρμόστηκε αναλογικά· ο αρχικός καμβάς παραμένει ορατός έξω από το αποτέλεσμα.
 	Generation cancelled	Η δημιουργία ακυρώθηκε
 	Refresh models	Ανανέωση μοντέλων
 	Optimizing prompt...	Βελτιστοποίηση προτροπής...
@@ -3812,3 +3813,71 @@ curves	Smooth	Εξομάλυνση
 	AI disabled	Το AI είναι απενεργοποιημένο
 	Generation details	Λεπτομέρειες δημιουργίας
 	Generating	Δημιουργία σε εξέλιξη
+
+	Save GUI	Αποθήκευση GUI
+	Recover draft	Ανάκτηση πρόχειρου
+	Reload textures	Επαναφόρτωση υφών
+	Close GUI	Κλείσιμο GUI
+	Nodes	Κόμβοι
+	Return to GUI	Επιστροφή στο GUI
+	Link selected layer	Σύνδεση επιλεγμένου επιπέδου
+	Use whole canvas	Χρήση ολόκληρου του καμβά
+	Publish to Defold	Δημοσίευση στο Defold
+	Edit / generate node image	Επεξεργασία / δημιουργία εικόνας κόμβου
+	Locate resource	Εντοπισμός πόρου
+	Show resource in folder	Εμφάνιση πόρου στον φάκελο
+	Copy resource path	Αντιγραφή διαδρομής πόρου
+	Approximate preview · default layout · verify advanced effects in Defold	Προσεγγιστική προεπισκόπηση · Προεπιλεγμένη διάταξη · Ελέγξτε τα σύνθετα εφέ στο Defold
+	Scale X	Κλίμακα X
+	Scale Y	Κλίμακα Y
+	Defold Project…	Defold Project…
+	Defold Project	Defold Project
+	Project folder (game.project)	Project folder (game.project)
+	Connect Defold	Connect Defold
+	Sync paused	Sync paused
+	Live · Defold	Live · Defold
+	Add child	Add child
+	Add sibling below	Add sibling below
+	Add child node	Add child node
+	Defold saves all modified project resources. Continue?	Defold saves all modified project resources. Continue?
+	Approximate preview · waiting for Defold	Approximate preview · waiting for Defold
+	Refresh	Refresh
+	Open resource in Defold	Open resource in Defold
+	Add GUI node	Add GUI node
+	Adjust mode	Adjust mode
+	Clipping inverted	Clipping inverted
+	Clipping mode	Clipping mode
+	Clipping visible	Clipping visible
+	Fill angle	Fill angle
+	GUI and artwork synchronized	GUI and artwork synchronized
+	Id	Id
+	Inherit alpha	Inherit alpha
+	Inner radius	Inner radius
+	Line break	Line break
+	Material	Material
+	Nine slice	Nine slice
+	Outer bounds	Outer bounds
+	Outline	Outline
+	Outline opacity	Outline opacity
+	Particle FX	Particle FX
+	Perimeter vertices	Perimeter vertices
+	Pivot	Pivot
+	Shadow opacity	Shadow opacity
+	Size mode	Size mode
+	Sync to Defold	Sync to Defold
+	Synced to Defold; save the GUI in Defold	Synced to Defold; save the GUI in Defold
+	Template	Template
+	Text	Text
+	Text leading	Text leading
+	Text tracking	Text tracking
+	X anchor	X anchor
+	Y anchor	Y anchor
+
+	Defold GUI Properties	Ιδιότητες GUI Defold
+
+	Select a Defold GUI node to edit its properties	Επιλέξτε έναν κόμβο GUI Defold για επεξεργασία των ιδιοτήτων του
+	Defold Sync	Συγχρονισμός Defold
+	Open a linked Defold GUI to synchronize	Ανοίξτε ένα συνδεδεμένο GUI Defold για συγχρονισμό
+	GUI resource	Πόρος GUI
+	Edits stay local until you sync	Οι αλλαγές παραμένουν τοπικές μέχρι τον συγχρονισμό
+	GUI nodes	Κόμβοι GUI

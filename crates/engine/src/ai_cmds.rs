@@ -92,14 +92,14 @@ fn bad(cmd: &str, msg: &str) -> EngineError {
 }
 
 fn target(s: &Session) -> std::result::Result<(), String> {
-    target_with_limit(s, MAX_TARGET_PIXELS)
+    target_with_limit(s, MAX_TARGET_PIXELS, true)
 }
 
 fn test_target(s: &Session) -> std::result::Result<(), String> {
-    target_with_limit(s, MAX_TEST_PIXELS)
+    target_with_limit(s, MAX_TEST_PIXELS, false)
 }
 
-fn target_with_limit(s: &Session, limit: u64) -> std::result::Result<(), String> {
+fn target_with_limit(s: &Session, limit: u64, linked_allowed:bool) -> std::result::Result<(), String> {
     if crate::channel_cmds::edits_channel(s) || s.tools.mask_targeted {
         return Err("AI candidates require layer pixels, not a mask or channel".into());
     }
@@ -114,11 +114,15 @@ fn target_with_limit(s: &Session, limit: u64) -> std::result::Result<(), String>
         return Err("drop the floating selection before creating a candidate".into());
     }
     let layer = crate::active_layer_of(s)?;
-    if !matches!(layer.content, LayerContent::Raster(_)) {
+    let node_art = linked_allowed.then(||crate::defold_design::node_for_layer(&st.doc,layer.id)).flatten()
+        .and_then(|n|st.doc.layer(photocraft_doc::LayerId(n.artwork))).filter(|l|l.surface().is_some());
+    if !matches!(layer.content, LayerContent::Raster(_)) && node_art.is_none() {
         return Err("AI candidates require a raster layer".into());
     }
     crate::commands::check_pixels_unlocked(&st.doc, layer.id).map_err(|e| e.to_string())?;
-    let area = st.doc.selection.as_ref().map_or(st.doc.bounds(), |s| s.content_bounds().intersect(&st.doc.bounds()));
+    if let Some(art)=node_art {crate::commands::check_pixels_unlocked(&st.doc,art.id).map_err(|e|e.to_string())?;}
+    let bounds=node_art.and_then(|l|photocraft_compose::composite_bounds(l,st.doc.bounds())).map(|r|r.intersect(&st.doc.bounds())).filter(|r|!r.is_empty()).unwrap_or(st.doc.bounds());
+    let area = st.doc.selection.as_ref().map_or(bounds, |s| s.content_bounds().intersect(&st.doc.bounds()));
     let pixels = u64::from(area.width()) * u64::from(area.height());
     if area.is_empty() || pixels == 0 {
         return Err("the selection is empty".into());
@@ -209,7 +213,7 @@ fn apply(s: &mut Session, p: &Value) -> Result<Value> {
     if !candidate.is_current(s) {
         return Err(EngineError::Other("the document changed; create a new candidate".into()));
     }
-    target_with_limit(s, if candidate.provider == "local-test" { MAX_TEST_PIXELS } else { MAX_TARGET_PIXELS }).map_err(EngineError::Other)?;
+    target_with_limit(s, if candidate.provider == "local-test" { MAX_TEST_PIXELS } else { MAX_TARGET_PIXELS }, false).map_err(EngineError::Other)?;
     let (layer, pixels, area) = (candidate.layer, candidate.pixels.clone(), candidate.area);
     s.edit("Apply AI Candidate", |doc, _| {
         *doc.layer_mut(layer).and_then(|l| l.surface_mut()).ok_or(EngineError::NoLayer(layer))? = pixels;
@@ -281,9 +285,15 @@ fn begin(s: &mut Session, p: &Value) -> Result<Value> {
         return Err(bad(ID, "AI history is full; remove a generation record first"));
     }
     let layer = st.active_layer.ok_or_else(|| bad(ID, "no active layer"))?;
-    let area = st.doc.selection.as_ref().map_or(st.doc.bounds(), |m| m.content_bounds().intersect(&st.doc.bounds()));
-    let pixels = st.doc.layer(layer).and_then(|l| l.surface()).ok_or(EngineError::NoLayer(layer))?.clone();
-    let frame = if mode == GenerationMode::Repaint { st.doc.selection.as_ref().map(|_| edit_frame(area, st.doc.bounds())).transpose()? } else { None };
+    if destination=="candidate" && st.doc.layer(layer).is_some_and(|l|!matches!(l.content,LayerContent::Raster(_))) {return Err(bad(ID,"Generate to a new layer for a GUI group or text node"));}
+    let node_area = crate::defold_design::node_for_layer(&st.doc, layer)
+        .and_then(|n| st.doc.layer(photocraft_doc::LayerId(n.artwork)))
+        .and_then(|l| photocraft_compose::composite_bounds(l, st.doc.bounds()))
+        .map(|r| r.intersect(&st.doc.bounds())).filter(|r| !r.is_empty());
+    let area = st.doc.selection.as_ref().map_or(node_area.unwrap_or(st.doc.bounds()), |m| m.content_bounds().intersect(&st.doc.bounds()));
+    let pixels = st.doc.layer(layer).and_then(|l| l.surface()).or_else(||crate::defold_design::node_for_layer(&st.doc,layer)
+        .and_then(|n|st.doc.layer(photocraft_doc::LayerId(n.artwork))).and_then(|l|l.surface())).ok_or(EngineError::NoLayer(layer))?.clone();
+    let frame = if mode == GenerationMode::Repaint { (st.doc.selection.is_some()||node_area.is_some()).then(|| edit_frame(area, st.doc.bounds())).transpose()? } else { None };
     // Keep a local full-canvas snapshot for on-demand MCP reads, separate from inline inputs.
     let context = if needs_canvas {
         Some(crate::ai_component::reference(&st.doc, st.doc.bounds(), if mode == GenerationMode::Component { 1024 } else { 1536 })?)
@@ -489,9 +499,9 @@ fn edit_reference(doc: &Document, frame: Rect) -> Result<String> {
     Ok(base64::engine::general_purpose::STANDARD.encode(bytes))
 }
 
-fn mapped_result(c: &Candidate, image: &Document) -> Result<Surface> {
+fn mapped_result(c: &Candidate, image: &Document) -> Result<(Surface, Rect)> {
     if c.mode == GenerationMode::Component {
-        return crate::ai_component::mapped_result(image, c.area, c.area, c.base.pixel_format()).map(|(pixels, _)| pixels);
+        return crate::ai_component::mapped_result(image, c.area, c.area, c.base.pixel_format());
     }
     let surface = image.layers.first().and_then(|l| l.surface()).ok_or_else(|| bad("ai.receiveCandidate", "image contains no pixels"))?;
     let frame = c.frame.unwrap_or(c.area);
@@ -501,14 +511,22 @@ fn mapped_result(c: &Candidate, image: &Document) -> Result<Surface> {
             "local edit returned the wrong aspect ratio; expected the complete square context frame, not a cropped selection",
         ));
     }
-    Ok(photocraft_algo::resample::resize_surface_in_canvas(
-        surface,
-        f64::from(frame.width()) / f64::from(image.size.width),
-        f64::from(frame.height()) / f64::from(image.size.height),
-        photocraft_algo::resample::Resample::Bicubic,
-        image.bounds(),
-    )
-    .convert(c.base.pixel_format()))
+    if image.size.width == 0 || image.size.height == 0 || frame.width() == 0 || frame.height() == 0 {
+        return Err(bad("ai.receiveCandidate", "image and destination must have nonzero dimensions"));
+    }
+    let scale = (f64::from(frame.width()) / f64::from(image.size.width)).min(f64::from(frame.height()) / f64::from(image.size.height));
+    // Full-image results fit inside the original canvas; never stretch or crop to fill it.
+    // Selection edits retain their square context and original document-coordinate mapping.
+    let area = if c.frame.is_some() {
+        c.area
+    } else {
+        let width = (f64::from(image.size.width) * scale).round().clamp(1.0, f64::from(frame.width())) as u32;
+        let height = (f64::from(image.size.height) * scale).round().clamp(1.0, f64::from(frame.height())) as u32;
+        Rect::from_xywh(frame.x0 + ((frame.width() - width) / 2) as i32, frame.y0 + ((frame.height() - height) / 2) as i32, width, height)
+    };
+    let resized = photocraft_algo::resample::resize_surface_in_canvas(surface, scale, scale, photocraft_algo::resample::Resample::Bicubic, image.bounds())
+        .convert(c.base.pixel_format());
+    Ok((resized, area))
 }
 
 fn cancel(s: &mut Session, p: &Value) -> Result<Value> {
@@ -588,16 +606,16 @@ fn receive(s: &mut Session, p: &Value) -> Result<Value> {
         return receive_layer(s, &c, doc, expand);
     }
     crate::color_cmds::convert_document(&mut doc, &crate::color_cmds::document_profile(&c.base), photocraft_cms::Intent::RelativeColorimetric, true)?;
-    let resized = mapped_result(&c, &doc)?;
-    let frame = c.frame.unwrap_or(c.area);
+    let (resized, area) = mapped_result(&c, &doc)?;
+    let frame = c.frame.unwrap_or(area);
     let fmt = c.pixels.format();
     let resized = resized.convert(fmt);
     let n = fmt.channels();
     let mut old = vec![0.0; n];
     let mut new = vec![0.0; n];
     let alpha_lock = c.base.effective_locks(c.layer).transparency;
-    for y in c.area.y0..c.area.y1 {
-        for x in c.area.x0..c.area.x1 {
+    for y in area.y0..area.y1 {
+        for x in area.x0..area.x1 {
             let k = c.selection.as_ref().map_or(1.0, |m| m.sample_channel(x, y, 0)).clamp(0.0, 1.0);
             if k == 0.0 {
                 continue;
@@ -627,7 +645,8 @@ fn receive(s: &mut Session, p: &Value) -> Result<Value> {
     let mut preview = (*c.base).clone();
     *preview.layer_mut(c.layer).and_then(|l| l.surface_mut()).ok_or(EngineError::NoLayer(c.layer))? = c.pixels.clone();
     c.preview = Arc::new(preview);
-    let result = c.metadata(s);
+    let mut result = c.metadata(s);
+    result["placement"] = json!({"fit":if c.mode == GenerationMode::Component{"component"}else if c.frame.is_some(){"selection-context"}else{"contain"},"hasMargins":c.mode != GenerationMode::Component && c.frame.is_none() && area != c.area,"sourceSize":[doc.size.width,doc.size.height],"bounds":[area.x0,area.y0,area.width(),area.height()]});
     s.ai.candidate = Some(c);
     s.ai.pending = None;
     Ok(result)
@@ -674,7 +693,7 @@ fn receive_layer(s: &mut Session, c: &Candidate, mut image: Document, expand: bo
     let (resized, area) = if c.mode == GenerationMode::Component {
         crate::ai_component::mapped_result(&image, c.area, if expand { c.base.bounds() } else { c.area }, c.base.pixel_format())?
     } else {
-        (mapped_result(c, &image)?, c.area)
+        mapped_result(c, &image)?
     };
     let frame = c.frame.unwrap_or(area);
     let mut pixels = Surface::new(c.base.pixel_format());
@@ -693,7 +712,7 @@ fn receive_layer(s: &mut Session, c: &Candidate, mut image: Document, expand: bo
             pixels.write_pixel(x, y, &pixel);
         }
     }
-    let previous = s.active_index();
+    let previous = s.focus();
     let recovered = destination.is_none();
     let select_result = recovered || c.is_current(s);
     let index = match destination {
@@ -734,14 +753,21 @@ fn receive_layer(s: &mut Session, c: &Candidate, mut image: Document, expand: bo
         for peer in peers {
             if let Some(layer) = doc.layer_mut(peer) { layer.visible = false; }
         }
-        doc.layers.push(layer);
+        let node = crate::defold_design::node_for_layer(doc, c.layer).map(|n| photocraft_doc::LayerId(n.layer));
+        if let Some(parent) = node.and_then(|id| doc.layer_mut(id))
+            && let LayerContent::Group(group) = &mut parent.content {
+            group.children.push(layer);
+        } else {
+            doc.layers.push(layer);
+        }
         if select_result {
             *active = Some(id);
         }
-        Ok(json!({"candidateId":c.id,"groupId":group_id,"layerId":id.0,"documentId":doc.id.0,"name":doc.layer(id).map(|l| l.name.clone()),"savedAsLayer":true,"recovered":recovered}))
+        Ok(json!({"candidateId":c.id,"groupId":group_id,"layerId":id.0,"documentId":doc.id.0,"name":doc.layer(id).map(|l| l.name.clone()),"savedAsLayer":true,"recovered":recovered,
+            "placement":{"fit":if c.mode == GenerationMode::Component{"component"}else if c.frame.is_some(){"selection-context"}else{"contain"},"hasMargins":c.mode != GenerationMode::Component && c.frame.is_none() && area != c.area,"sourceSize":[image.size.width,image.size.height],"bounds":[area.x0,area.y0,area.width(),area.height()]}}))
     });
-    if !recovered && let Some(previous) = previous.filter(|p| *p != index) {
-        s.set_active(previous);
+    if !recovered || matches!(previous, crate::defold_cmds::DocumentFocus::Gui(_)) {
+        s.restore_focus(&previous);
     }
     let result = added?;
     s.ai.pending = None;

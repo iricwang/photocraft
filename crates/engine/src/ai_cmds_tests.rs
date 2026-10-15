@@ -98,6 +98,95 @@ fn generated_image() -> String {
 }
 
 #[test]
+fn whole_image_results_fit_without_stretching_cropping_or_erasing_margins() {
+    for (width, height, source_width, source_height) in [(128, 128, 64, 32), (128, 128, 32, 64), (64, 64, 128, 64), (64, 64, 64, 128)] {
+        for depth in [8, 16, 32] {
+            for destination in ["candidate", "layer"] {
+                let mut s = Session::new();
+                s.execute("file.new", json!({"width":width,"height":height,"depth":depth})).unwrap();
+                s.execute("edit.fill", json!({"contents":"color","color":[0.0,1.0,0.0,1.0]})).unwrap();
+                let before = s.active().unwrap().doc.clone();
+                let began = s.execute("ai.beginGeneration", json!({"prompt":"Use the reference layout","provider":"codex","destination":destination})).unwrap();
+                let mut image = Document::new(
+                    "Wide or tall result",
+                    photocraft_geom::Size::new(source_width, source_height),
+                    photocraft_doc::ColorMode::Rgb,
+                    SampleType::U8,
+                );
+                let mut surface = Surface::new(PixelFormat::RGBA8);
+                surface.fill_rect(image.bounds(), &[0.0, 0.0, 1.0, 1.0]);
+                surface.fill_rect(Rect::new(8, 8, 16, 16), &[1.0, 0.0, 0.0, 1.0]);
+                image.layers.push(photocraft_doc::Layer::new("Result", LayerContent::Raster(surface)));
+                let encoded = base64::engine::general_purpose::STANDARD.encode(photocraft_io::export(&image, "result.png", &Default::default()).unwrap().bytes);
+                let receipt = s.execute("ai.receiveCandidate", json!({"candidateId":began["candidateId"],"imageBase64":encoded})).unwrap();
+                let scale = (f64::from(width) / f64::from(source_width)).min(f64::from(height) / f64::from(source_height));
+                let w = (f64::from(source_width) * scale) as i32;
+                let h = (f64::from(source_height) * scale) as i32;
+                let x0 = (width - w) / 2;
+                let y0 = (height - h) / 2;
+                assert_eq!(receipt["placement"]["bounds"], json!([x0, y0, w, h]));
+                assert_eq!(receipt["placement"]["sourceSize"], json!([source_width, source_height]));
+                assert_eq!(receipt["placement"]["hasMargins"], true);
+                let pixels = if destination == "layer" {
+                    let doc = &s.active().unwrap().doc;
+                    assert_eq!(doc.size, before.size);
+                    assert_eq!(doc.ai_generations[0].area, before.bounds(), "history retains the original target for explicit future edits");
+                    assert_eq!(doc.layers[0].surface().unwrap().read_region(before.bounds()), before.layers[0].surface().unwrap().read_region(before.bounds()));
+                    doc.layer(LayerId(receipt["layerId"].as_u64().unwrap())).unwrap().surface().unwrap()
+                } else {
+                    assert!(Arc::ptr_eq(&before, &s.active().unwrap().doc));
+                    &s.ai.candidate.as_ref().unwrap().pixels
+                };
+                let mut red = Rect::new(width, height, 0, 0);
+                for y in 0..height {
+                    for x in 0..width {
+                        let p = pixels.rgba(x, y);
+                        if x < x0 || x >= x0 + w || y < y0 || y >= y0 + h {
+                            if destination == "layer" {
+                                assert_eq!(p[3], 0.0);
+                            } else {
+                                assert!(p[1] > 0.99 && p[3] > 0.99, "uncovered source pixels must survive");
+                            }
+                        } else if p[0] > 0.5 {
+                            red = Rect::new(red.x0.min(x), red.y0.min(y), red.x1.max(x + 1), red.y1.max(y + 1));
+                        }
+                    }
+                }
+                assert_eq!(red.width(), red.height(), "square marker must remain square");
+                assert_eq!(red.width(), (8.0 * scale) as u32);
+                assert!(pixels.rgba(x0 + w - 2, y0 + h - 2)[2] > 0.99, "bottom-right content must not be cropped");
+            }
+        }
+    }
+}
+
+#[test]
+#[ignore = "Read-only local PSD and existing output replay; no model calls"]
+fn replay_existing_image_with_aspect_preserving_placement() {
+    let source = std::path::PathBuf::from(std::env::var_os("PHOTOCRAFT_REPLAY_SOURCE").expect("PSD path"));
+    let generated = std::path::PathBuf::from(std::env::var_os("PHOTOCRAFT_REPLAY_IMAGE").expect("existing generated PNG"));
+    let output = std::path::PathBuf::from(std::env::var_os("PHOTOCRAFT_REPLAY_OUT").expect("new output directory"));
+    std::fs::create_dir_all(&output).unwrap();
+    let original = std::fs::read(&source).unwrap();
+    let imported = photocraft_io::import(&source.to_string_lossy(), &original).unwrap().document;
+    let size = imported.size;
+    let mut s = Session::new();
+    s.add_document(imported, None);
+    let began = s.execute("ai.beginGeneration", json!({"prompt":"Offline placement replay","provider":"images-api","destination":"layer"})).unwrap();
+    let png = std::fs::read(&generated).unwrap();
+    let receipt = s
+        .execute("ai.receiveCandidate", json!({"candidateId":began["candidateId"],"imageBase64":base64::engine::general_purpose::STANDARD.encode(png)}))
+        .unwrap();
+    let doc = &s.active().unwrap().doc;
+    assert_eq!(doc.size, size);
+    let composite = photocraft_io::export(doc, "replay.png", &Default::default()).unwrap().bytes;
+    let mut file = std::fs::OpenOptions::new().write(true).create_new(true).open(output.join("composite.png")).unwrap();
+    std::io::Write::write_all(&mut file, &composite).unwrap();
+    assert_eq!(std::fs::read(source).unwrap(), original);
+    eprintln!("{receipt}");
+}
+
+#[test]
 fn thin_local_edits_crop_context_without_distortion_or_outside_changes() {
     for (width, height, area) in [(128, 80, Rect::new(8, 68, 120, 76)), (80, 128, Rect::new(68, 8, 76, 120))] {
         for depth in [8, 16, 32] {
@@ -323,7 +412,9 @@ fn large_canvas_generation_bounds_reference_but_preserves_destination_and_undo()
     let doc = &s.active().unwrap().doc;
     assert_eq!(doc.size, before.size);
     assert_eq!(pixels(doc, layer).format(), pixels(&before, layer).format());
-    assert!((pixels(doc, layer).pixel(1919, 1079)[0] - 240.0 / 255.0).abs() < 0.01);
+    assert!((pixels(doc, layer).pixel(1499, 1079)[0] - 240.0 / 255.0).abs() < 0.01);
+    assert_eq!(pixels(doc, layer).pixel(1919, 1079), pixels(&before, layer).pixel(1919, 1079));
+    assert_eq!(pixels(doc, layer).pixel(419, 0), pixels(&before, layer).pixel(419, 0));
     s.execute("edit.undo", json!({})).unwrap();
     assert_eq!(bytes(pixels(&s.active().unwrap().doc, layer)), bytes(pixels(&before, layer)));
 }

@@ -42,6 +42,13 @@ The transport is `apps/photocraft/src/control_server.rs`, and the handlers are i
 
 ## Methods
 
+Defold node properties use the independent `defoldProperties` panel. Open it with
+`engine.execute {command: "window.panel.defoldProperties", params: {}}`; the standard
+`window.panel.float`, `window.panel.move`, `window.panel.close` and workspace layout
+commands accept `panel: "defoldProperties"`. Its visibility and tab state are exposed
+as `panels.defoldProperties` and `dockTabs.defoldProperties`; `properties` continues to
+refer only to PhotoCraft's native layer properties.
+
 - `engine.execute {command, params}`: run any engine or UI command by id. Engine commands run directly with their default params and never open a dialog. Use `ui.menu.invoke` for menu-click behaviour, which opens a command's dialog when no params are given. `params` must be a JSON object (omit it or pass `null` for none); an array, string, number or boolean is an error naming the command, in every transport (control channel, `serve`, MCP and the CLI)
 - `engine.commands`: list commands with enablement
 - `ui.inspect`: full UI state (tool, panels, views, dialogs, windows, window size). The menu tree is not included; use `ui.menu.list`. `brushPicker` is `null` while closed and `{pos: [x, y], size: [w, h]?, list: {collapsed, filter, renaming, showName, showStroke, showTip, scale}}` while the Brush Preset picker is open (coordinates in screen points; `size` is the picker's content size once its corner grip was dragged, `null` before that, and the drag remembers both dimensions; the three `show*` flags pick the parts of each preset's card — at least one is always on; `scale` is the footer slider, 0.15–2 with 1 the standard, multiplying the cards' width and height — the heights stop at half size and the name and tip-size text hold their 1.0 size — and dropping the tips' size numbers at 0.40 and below; the parts and the scale are remembered across restarts, while the search, collapsed groups and a rename in progress are not). `view` holds the View/Window/Type preferences: `screen_mode`, `extras`, `show` and `snap_to` flags, `flip_horizontal`, `arrange` (Window › Arrange layout), pixel aspect, font preview size, language options. `perf.timings.gpuInfo` holds the graphics adapter, backend, driver, the backend chosen at launch and why, the canvas renderer (`gpu`/`cpu`) and, after a device loss, `lost` (`help.systemInfo` returns the same as `info`)

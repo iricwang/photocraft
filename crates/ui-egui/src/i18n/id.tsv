@@ -3058,6 +3058,7 @@ curves	Smooth	Haluskan
 	Use current layer as reference	Gunakan lapisan aktif sebagai referensi
 	Generate image	Buat gambar
 	Generating image...	Membuat gambar...
+	Image fitted proportionally; original canvas remains visible outside the result.	Gambar disesuaikan secara proporsional; kanvas asli tetap terlihat di luar hasil.
 	Generation cancelled	Pembuatan dibatalkan
 	Refresh models	Segarkan model
 	Optimizing prompt...	Mengoptimalkan prompt...
@@ -3105,3 +3106,72 @@ curves	Smooth	Haluskan
 	Generating	Sedang membuat
 	Ready	Siap
 	New document	Dokumen baru
+
+	Save GUI	Simpan GUI
+	Recover draft	Pulihkan draf
+	Reload textures	Muat ulang tekstur
+	Close GUI	Tutup GUI
+	Nodes	Simpul
+	Return to GUI	Kembali ke GUI
+	Link selected layer	Tautkan lapisan terpilih
+	Use whole canvas	Gunakan seluruh kanvas
+	Publish to Defold	Publikasikan ke Defold
+	Edit / generate node image	Edit / buat gambar simpul
+	Locate resource	Temukan sumber daya
+	Show resource in folder	Tampilkan sumber daya dalam folder
+	Copy resource path	Salin jalur sumber daya
+	Approximate preview · default layout · verify advanced effects in Defold	Pratinjau perkiraan · Tata letak bawaan · Periksa efek lanjutan di Defold
+	Scale X	Skala X
+	Scale Y	Skala Y
+	Defold Project…	Defold Project…
+	Defold Project	Defold Project
+	Project folder (game.project)	Project folder (game.project)
+	Connect Defold	Connect Defold
+	Sync paused	Sync paused
+	Live · Defold	Live · Defold
+	Add child	Add child
+	Add sibling below	Add sibling below
+	Add child node	Add child node
+	Defold saves all modified project resources. Continue?	Defold saves all modified project resources. Continue?
+	Approximate preview · waiting for Defold	Approximate preview · waiting for Defold
+	Refresh	Refresh
+	Open resource in Defold	Open resource in Defold
+	Add GUI node	Add GUI node
+	Adjust mode	Adjust mode
+	Clipping inverted	Clipping inverted
+	Clipping mode	Clipping mode
+	Clipping visible	Clipping visible
+	Fill angle	Fill angle
+	GUI and artwork synchronized	GUI and artwork synchronized
+	Id	Id
+	Inherit alpha	Inherit alpha
+	Inner radius	Inner radius
+	Line break	Line break
+	Material	Material
+	Nine slice	Nine slice
+	Outer bounds	Outer bounds
+	Outline	Outline
+	Outline opacity	Outline opacity
+	Particle FX	Particle FX
+	Perimeter vertices	Perimeter vertices
+	Pivot	Pivot
+	Shadow	Shadow
+	Shadow opacity	Shadow opacity
+	Size mode	Size mode
+	Sync to Defold	Sync to Defold
+	Synced to Defold; save the GUI in Defold	Synced to Defold; save the GUI in Defold
+	Template	Template
+	Text	Text
+	Text leading	Text leading
+	Text tracking	Text tracking
+	X anchor	X anchor
+	Y anchor	Y anchor
+
+	Defold GUI Properties	Properti GUI Defold
+
+	Select a Defold GUI node to edit its properties	Pilih node GUI Defold untuk mengedit propertinya
+	Defold Sync	Sinkronisasi Defold
+	Open a linked Defold GUI to synchronize	Buka GUI Defold tertaut untuk menyinkronkan
+	GUI resource	Sumber daya GUI
+	Edits stay local until you sync	Perubahan tetap lokal sampai disinkronkan
+	GUI nodes	Node GUI

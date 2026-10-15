@@ -48,6 +48,27 @@ impl PhotocraftApp {
     /// `path` for File › Save unless it is a derivative preview, and `path` goes to the top of Open Recent. Returns the import
     /// warnings (also shown to the user).
     pub fn open_file(&mut self, path: &str, bytes: &[u8]) -> Result<Vec<String>, String> {
+        if std::path::Path::new(path).file_name().is_some_and(|n| n == "game.project") {
+            let root = std::path::Path::new(path).parent().ok_or("Project folder missing")?.to_string_lossy();
+            let project = self.run("defold.openProject", serde_json::json!({"path":root}))?;
+            self.ui.defold.project_root = project["root"].as_str().unwrap_or_default().into();
+            self.ui.defold.project_files =
+                project["files"].as_array().map(|a| a.iter().filter_map(serde_json::Value::as_str).map(str::to_string).collect()).unwrap_or_default();
+            self.ui.defold.project_open = true;
+            self.push_recent(path);
+            return Ok(vec![]);
+        }
+        if photocraft_engine::file_cmds::extension(path).as_deref() == Some("gui") {
+            let gui = self.run("defold.openDesign", serde_json::json!({"path":path}))?;
+            self.ui.defold.project_root = self.session.active().and_then(|st|st.doc.defold.as_ref()).map(|d|d.root.clone()).unwrap_or_default();
+            self.ui.defold.zoom = 1.0;
+            self.ui.defold.pan = [0.0; 2];
+            self.ui.panels.layers = true;
+            self.ui.panels.dock = true;
+            self.sync_views();
+            self.push_recent(path);
+            return Ok(gui["warnings"].as_array().map(|a|a.iter().filter_map(serde_json::Value::as_str).map(str::to_string).collect()).unwrap_or_default());
+        }
         // Brushes/gradients go to the preset libraries (no document, no Open Recent entry).
         if let Some(r) = crate::preset_files_ui::open(self, path, bytes) {
             return r.map(|()| Vec::new());
@@ -89,6 +110,9 @@ impl PhotocraftApp {
         // Documents opening in the background are read on the worker too (a 2 GB PSB read
         // would block the window). Preset files (brushes, gradients) go the usual way.
         let ext = std::path::Path::new(path).extension().map(|e| e.to_string_lossy().to_ascii_lowercase()).unwrap_or_default();
+        if ext == "gui" || std::path::Path::new(path).file_name().is_some_and(|n| n == "game.project") {
+            return self.open_file(path, &[]);
+        }
         if self.background_jobs && !crate::preset_files_ui::PRESET_EXTS.contains(&ext.as_str()) {
             crate::jobs_ui::start_open(self, &display_name(path), Some(path.to_string()), photocraft_engine::jobs::OpenSource::Path(path.to_string()))?;
             return Ok(Vec::new());
@@ -156,7 +180,10 @@ impl PhotocraftApp {
         };
         for f in files {
             let name = dropped_name(&f);
-            if target == DropTarget::Canvas && !crate::preset_files_ui::is_preset_file(&name) {
+            if target == DropTarget::Canvas
+                && !crate::preset_files_ui::is_preset_file(&name)
+                && photocraft_engine::file_cmds::extension(&name).as_deref() != Some("gui")
+            {
                 self.drop_places.push_back(f);
                 continue;
             }

@@ -382,7 +382,7 @@ fn apply(s: &mut Session, p: &Value) -> Result<Value> {
     let layer = layer.clone();
     let job = t.id;
     let plan = *plan_id;
-    let previous = s.active_index();
+    let previous = s.focus();
     s.set_active(index);
     let receipt = s.edit("Add AI Assets", |doc, active| {
         let id = layer.id;
@@ -391,9 +391,7 @@ fn apply(s: &mut Session, p: &Value) -> Result<Value> {
         *active = Some(id);
         Ok(json!({"jobId":job,"planId":plan,"documentId":doc.id.0,"layerId":id.0,"name":"AI assets","componentCount":count,"savedAsLayer":true}))
     });
-    if let Some(previous) = previous.filter(|old| *old != index) {
-        s.set_active(previous);
-    }
+    s.restore_focus(&previous);
     let receipt = receipt?;
     if let Some(t) = s.assets.task.as_mut() {
         t.receipt = Some((key, receipt.clone()));

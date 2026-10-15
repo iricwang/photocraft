@@ -437,7 +437,8 @@ impl Session {
                         e => EngineError::Other(e.to_string()),
                     })
             },
-            move |s, r: photocraft_io::ImportResult| {
+            move |s, mut r: photocraft_io::ImportResult| {
+                r.warnings.extend(crate::defold_design::prepare_open(&mut r.document)?);
                 let (index, color) = s.open_document(r.document, None);
                 if let Some(st) = s.active_mut() {
                     st.source_read_only = r.source_read_only;
@@ -603,6 +604,20 @@ impl Session {
 
     /// Run the command `id`: inline, or (with `background`) as a job when it is one.
     pub(crate) fn dispatch(&mut self, id: &str, params: Value, background: bool) -> Result<Started> {
+        if self.active_gui().is_some() {
+            let mapped = match id {
+                "edit.undo" => Some("defold.undo"),
+                "edit.redo" => Some("defold.redo"),
+                "layer.delete" => Some("defold.deleteNode"),
+                "layer.new.layer" => Some("defold.addNode"),
+                "layer.renameLayer" => Some("defold.renameNode"),
+                "file.close" if params.get("document").is_none() => Some("defold.closeGui"),
+                _ => None,
+            };
+            if let Some(mapped) = mapped {
+                return self.dispatch(mapped, params, background);
+            }
+        }
         let spec = crate::commands::find(id).ok_or_else(|| EngineError::UnknownCommand(id.to_string()))?;
         // Params are named fields: anything but an object (or null, meaning none) is a caller
         // mistake, not "use every default".
@@ -730,7 +745,7 @@ impl Session {
 
     fn apply_job(&mut self, job: &Running, apply: Option<Apply>, payload: Payload) -> Result<Value> {
         let Running { label, doc, snapshot, coalesce, color_restrict, command, params, journal, .. } = job;
-        let prev_active = self.active;
+        let prev_active = self.focus();
         let target = match doc {
             Some(d) => {
                 let i =
@@ -739,7 +754,7 @@ impl Session {
                 if !unchanged {
                     return Err(EngineError::Other(format!("`{label}`: the document changed while it ran; the result was discarded")));
                 }
-                self.active = Some(i);
+                self.set_active(i);
                 Some(i)
             }
             None => None,
@@ -762,7 +777,7 @@ impl Session {
         // Keep the user's active document unless the job opened a new one.
         // This also restores the selection when the apply step returned an error.
         if target.is_some() && self.active == target {
-            self.active = prev_active.filter(|i| *i < self.docs.len()).or(self.active);
+            self.restore_focus(&prev_active);
         }
         r
     }

@@ -3240,6 +3240,7 @@ curves	Smooth	매끄럽게
 	Use current layer as reference	현재 레이어를 참조로 사용
 	Generate image	이미지 생성
 	Generating image...	이미지 생성 중...
+	Image fitted proportionally; original canvas remains visible outside the result.	이미지 비율을 유지해 배치했습니다. 결과 바깥에는 원래 캔버스가 표시됩니다.
 	Generation cancelled	생성 취소됨
 	Refresh models	모델 새로고침
 	Optimizing prompt...	프롬프트 최적화 중...
@@ -3286,3 +3287,71 @@ curves	Smooth	매끄럽게
 	Generation details	생성 세부 정보
 	Generating	생성 중
 	Ready	준비됨
+
+	Save GUI	GUI 저장
+	Recover draft	초안 복구
+	Reload textures	텍스처 다시 불러오기
+	Close GUI	GUI 닫기
+	Nodes	노드
+	Return to GUI	GUI로 돌아가기
+	Link selected layer	선택한 레이어 연결
+	Use whole canvas	전체 캔버스 사용
+	Publish to Defold	Defold에 게시
+	Edit / generate node image	노드 이미지 편집 / 생성
+	Locate resource	리소스 찾기
+	Show resource in folder	폴더에서 리소스 표시
+	Copy resource path	리소스 경로 복사
+	Approximate preview · default layout · verify advanced effects in Defold	근사 미리보기 · 기본 레이아웃 · 고급 효과는 Defold에서 확인
+	Scale X	X 배율
+	Scale Y	Y 배율
+	Defold Project…	Defold Project…
+	Defold Project	Defold Project
+	Project folder (game.project)	Project folder (game.project)
+	Connect Defold	Connect Defold
+	Sync paused	Sync paused
+	Live · Defold	Live · Defold
+	Add child	Add child
+	Add sibling below	Add sibling below
+	Add child node	Add child node
+	Defold saves all modified project resources. Continue?	Defold saves all modified project resources. Continue?
+	Approximate preview · waiting for Defold	Approximate preview · waiting for Defold
+	Refresh	Refresh
+	Open resource in Defold	Open resource in Defold
+	Add GUI node	Add GUI node
+	Adjust mode	Adjust mode
+	Clipping inverted	Clipping inverted
+	Clipping mode	Clipping mode
+	Clipping visible	Clipping visible
+	Fill angle	Fill angle
+	GUI and artwork synchronized	GUI and artwork synchronized
+	Id	Id
+	Inherit alpha	Inherit alpha
+	Inner radius	Inner radius
+	Line break	Line break
+	Material	Material
+	Nine slice	Nine slice
+	Outer bounds	Outer bounds
+	Outline	Outline
+	Outline opacity	Outline opacity
+	Particle FX	Particle FX
+	Perimeter vertices	Perimeter vertices
+	Pivot	Pivot
+	Shadow opacity	Shadow opacity
+	Size mode	Size mode
+	Sync to Defold	Sync to Defold
+	Synced to Defold; save the GUI in Defold	Synced to Defold; save the GUI in Defold
+	Template	Template
+	Text	Text
+	Text leading	Text leading
+	Text tracking	Text tracking
+	X anchor	X anchor
+	Y anchor	Y anchor
+
+	Defold GUI Properties	Defold GUI 속성
+
+	Select a Defold GUI node to edit its properties	속성을 편집할 Defold GUI 노드를 선택하세요
+	Defold Sync	Defold 동기화
+	Open a linked Defold GUI to synchronize	동기화할 연결된 Defold GUI를 여세요
+	GUI resource	GUI 리소스
+	Edits stay local until you sync	동기화할 때까지 변경 사항은 로컬에 유지됩니다
+	GUI nodes	GUI 노드

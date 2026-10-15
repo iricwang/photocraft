@@ -406,7 +406,7 @@ fn build() -> Vec<CommandSpec> {
                 Ok(json!({ "document": i }))
             }
         ),
-        cmd!("file.close", "Close", ["File"], Some("Cmd+W"), r##"{"document":index?}"##, has_doc, |s, p| {
+        cmd!("file.close", "Close", ["File"], Some("Cmd+W"), r##"{"document":index?}"##, crate::defold_cmds::has_any_document, |s, p| {
             let i = p.get("document").and_then(Value::as_u64).map(|v| v as usize).or(s.active_index()).ok_or(EngineError::NoDocument)?;
             s.close(i).ok_or(EngineError::NoDocument)?;
             Ok(Value::Null)
@@ -1264,6 +1264,8 @@ fn build() -> Vec<CommandSpec> {
     v.extend(crate::mask_view_cmds::specs());
     v.extend(crate::layer_mask_props_cmds::specs());
     v.extend(crate::actions_cmds::specs());
+    v.extend(crate::defold_cmds::specs());
+    v.extend(crate::defold_design::specs());
     v.extend(crate::ai_cmds::specs());
     v.extend(crate::ai_project_cmds::specs());
     v.extend(crate::ai_history_cmds::specs());

@@ -2659,6 +2659,7 @@ curves	Smooth	平滑
 	Use current layer as reference	以目前圖層為參考
 	Generate image	產生圖片
 	Generating image...	正在產生圖片...
+	Image fitted proportionally; original canvas remains visible outside the result.	圖片已等比貼回；未覆蓋區域仍顯示原畫布。
 	Generation cancelled	產生已取消
 	Codex model (automatic if empty)	Codex 模型（留空自動選擇）
 	Refresh models	重新整理模型
@@ -2715,3 +2716,71 @@ curves	Smooth	平滑
 	Generating	生成中
 	Ready	就緒
 	New document	新增文件
+
+	Save GUI	儲存 GUI
+	Recover draft	復原草稿
+	Reload textures	重新載入貼圖
+	Close GUI	關閉 GUI
+	Nodes	節點
+	Return to GUI	返回 GUI
+	Link selected layer	連結所選圖層
+	Use whole canvas	使用整個畫布
+	Publish to Defold	發佈至 Defold
+	Edit / generate node image	編輯／生成節點素材
+	Locate resource	定位資源
+	Show resource in folder	在資料夾中顯示資源
+	Copy resource path	複製資源路徑
+	Approximate preview · default layout · verify advanced effects in Defold	近似預覽 · 預設版面配置 · 進階效果請在 Defold 中核對
+	Scale X	水平縮放
+	Scale Y	垂直縮放
+	Defold Project…	Defold 项目…
+	Defold Project	Defold 项目
+	Project folder (game.project)	项目目录（game.project）
+	Connect Defold	连接 Defold
+	Sync paused	同步已暂停
+	Live · Defold	实时 · Defold
+	Add child	添加子节点
+	Add sibling below	在下方添加同级节点
+	Add child node	添加子节点
+	Defold saves all modified project resources. Continue?	Defold 将保存项目中所有已修改资源，是否继续？
+	Approximate preview · waiting for Defold	近似预览 · 等待 Defold 画面
+	Refresh	刷新
+	Open resource in Defold	在 Defold 中打开素材
+	Add GUI node	Add GUI node
+	Adjust mode	Adjust mode
+	Clipping inverted	Clipping inverted
+	Clipping mode	Clipping mode
+	Clipping visible	Clipping visible
+	Fill angle	Fill angle
+	GUI and artwork synchronized	GUI and artwork synchronized
+	Id	Id
+	Inherit alpha	Inherit alpha
+	Inner radius	Inner radius
+	Line break	Line break
+	Material	Material
+	Nine slice	Nine slice
+	Outer bounds	Outer bounds
+	Outline	Outline
+	Outline opacity	Outline opacity
+	Particle FX	Particle FX
+	Perimeter vertices	Perimeter vertices
+	Pivot	Pivot
+	Shadow	Shadow
+	Shadow opacity	Shadow opacity
+	Size mode	Size mode
+	Sync to Defold	Sync to Defold
+	Synced to Defold; save the GUI in Defold	Synced to Defold; save the GUI in Defold
+	Template	Template
+	Text	Text
+	Text leading	Text leading
+	Text tracking	Text tracking
+	X anchor	X anchor
+	Y anchor	Y anchor
+
+	Defold GUI Properties	Defold GUI 屬性
+	Select a Defold GUI node to edit its properties	選擇 Defold GUI 節點以編輯其屬性
+	Defold Sync	Defold 同步
+	Open a linked Defold GUI to synchronize	開啟關聯的 Defold GUI 後即可同步
+	GUI resource	GUI 資源
+	Edits stay local until you sync	編輯保留在本機，點擊同步後更新 Defold
+	GUI nodes	GUI 節點

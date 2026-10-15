@@ -180,7 +180,9 @@ fn composer_actions(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
                 let name = st.active_layer.and_then(|id| st.doc.layer(id)).map_or_else(|| tl!("None").to_owned(), |layer| layer.name.clone());
                 format!("{}: {name}", tl!("Layer"))
             })
-            .unwrap_or_else(|| tl!("New document").to_owned());
+            .unwrap_or_else(|| {
+                app.session.active_gui().map_or_else(|| tl!("New document").to_owned(), |d| format!("GUI: {}", d.selected.as_deref().unwrap_or("—")))
+            });
         let reserved = if compact { 112.0 } else { 177.0 };
         ui.allocate_ui_with_layout(egui::vec2((ui.available_width() - reserved).max(20.0), 28.0), egui::Layout::left_to_right(egui::Align::Center), |ui| {
             ui.add(egui::Label::new(egui::RichText::new(&target).color(t.text_dim)).truncate()).on_hover_text(&target);
