@@ -3243,6 +3243,23 @@ mod tests {
     }
 
     #[test]
+    fn move_target_survives_restarts_in_both_modes() {
+        let (mut app, store) = app_with_store();
+        let ctx = egui::Context::default();
+        tick(&mut app, &ctx);
+        assert_eq!(app.ui.tool_options.move_target, "layer");
+        for target in ["group", "layer"] {
+            app.ui.tool_options.move_target = target.into();
+            crate::tool_memory::persist(&mut app, &ctx);
+            tick(&mut app, &ctx);
+            let saved = store.lock().unwrap().clone().unwrap();
+            let (mut restarted, _) = app_with_saved(Some(saved));
+            tick(&mut restarted, &ctx);
+            assert_eq!(restarted.ui.tool_options.move_target, target);
+        }
+    }
+
+    #[test]
     fn tool_options_survive_a_restart() {
         let (mut app, store) = app_with_store();
         let ctx = egui::Context::default();

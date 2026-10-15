@@ -51,6 +51,20 @@ curl -sfL -o assets/icons/<name>.svg https://raw.githubusercontent.com/lucide-ic
 
 ## Interaction models (match Photoshop CC)
 
+The floating AI toolbar collapses completely into the AI Studio switch at the top of the
+right window-control rail. The original AI monogram and spark glyph is shared by the rail
+and toolbar header. The rail switch shows toolbar visibility and restores the existing
+draft independently of the AI enable switch and Model settings panel.
+
+Local UI-editing preference (2026-10-15): Move Auto-Select defaults to **Layer**, so artwork in
+nested folders is directly selectable. **Group** remains an explicit options-bar choice; both
+choices persist across restarts. An explicit Layers-panel or `layer.select` selection of a folder
+allows dragging that folder from its visible artwork in Layer mode. Folders merely selected by
+import, group creation or Group-mode auto-selection do not retain that behavior. Shift-add picks
+the individual hit. Rollover uses the same resolver as clicking, draws its outline and name, and
+refreshes when the layer selection changes even if the pointer stays still. This intentionally
+overrides the upstream Group default for this UI-editing workflow.
+
 | Feature | Module | Behaviour |
 |---|---|---|
 | Type tool | `type_tool.rs` | Click: point text with the placeholder "Lorem Ipsum" selected. Drag: paragraph box. Inline caret and selection drawn from the text engine layout. ⌥/⌘ word and line navigation, ↩ newline, ⌘↩ or Esc commits, a click outside commits. One history step per session (`coalesce`). A new layer is named after its text; an empty one is deleted. |

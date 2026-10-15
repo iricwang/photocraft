@@ -63,6 +63,7 @@ pub mod color_picker_ui;
 pub mod color_range_ui;
 pub mod comps_ui;
 pub mod control;
+mod peer_binding_ui;
 pub mod corner_radius;
 pub mod credits;
 pub mod crop_mode;
@@ -629,6 +630,7 @@ pub struct PhotocraftApp {
     /// The first digit of a two-digit opacity typed on the number keys (`opacity_keys`, #352).
     pub(crate) opacity_keys: opacity_keys::Pending,
     control_rx: Option<Receiver<ControlRequest>>,
+    peer_binding: peer_binding_ui::BindingUi,
     pending_screenshots: Vec<(u64, Option<String>, Sender<ControlResponse>)>,
     /// Screenshots not yet requested from the viewport: (token, earliest time in ms, frames seen).
     queued_screenshots: Vec<(u64, f64, u32)>,
@@ -756,6 +758,8 @@ pub struct PhotocraftApp {
     pub(crate) hover_layer: Option<photocraft_doc::LayerId>,
     /// Layer hovered on the canvas, highlighted in the Layers panel.
     pub(crate) canvas_hover_layer: Option<photocraft_doc::LayerId>,
+    /// Explicit layer-list/control selection; automatic picks must not make folders sticky.
+    pub(crate) move_explicit_selection: Option<(photocraft_doc::DocId, Vec<photocraft_doc::LayerId>)>,
     pub(crate) clone_preview: Option<crate::canvas::ClonePreviewCache>,
     /// Info panel sample cache: ((x, y, revision, Sample Size), composite RGBA).
     info_sample: Option<(InfoSampleKey, [f32; 4])>,
@@ -863,6 +867,7 @@ impl PhotocraftApp {
             caps_lock: false,
             opacity_keys: None,
             control_rx: None,
+            peer_binding: Default::default(),
             pending_screenshots: Vec::new(),
             queued_screenshots: Vec::new(),
             input_waiters: Vec::new(),
@@ -911,6 +916,7 @@ impl PhotocraftApp {
             hover_doc: None,
             hover_layer: None,
             canvas_hover_layer: None,
+            move_explicit_selection: None,
             clone_preview: None,
             info_sample: None,
             os_clip_sig: None,
@@ -1022,6 +1028,9 @@ impl PhotocraftApp {
 
     /// Run an engine command, reporting errors in the status bar.
     pub fn run(&mut self, id: &str, params: Value) -> Result<Value, String> {
+        if photocraft_engine::peer_binding::state().frozen && id != "defold.bindingStatus" {
+            return Err("Wait for the application binding switch to finish".into());
+        }
         if let Some(result) = delete_layer_prompt::intercept(self, id, &params) {
             return result;
         }
@@ -1034,6 +1043,9 @@ impl PhotocraftApp {
             self.session.authorize = gate;
         }
         let result = self.run_command(id, params);
+        if result.is_ok() && id == "layer.select" {
+            self.move_explicit_selection = self.session.active().map(|st| (st.doc.id, st.selected_layers()));
+        }
         if gate.is_some() {
             self.session.authorize = None;
         }
@@ -1823,6 +1835,7 @@ impl eframe::App for PhotocraftApp {
             self.checker = None;
         }
         self.drain_control(ctx);
+        peer_binding_ui::tick(self, ctx);
         native_menu::run(self, ctx);
         // Switching tools commits, also between the Type and Type Mask tools.
         if self.ui.text_edit.as_ref().is_some_and(|ed| !self.ui.tool.is_type() || ed.mask != self.ui.tool.is_type_mask()) {

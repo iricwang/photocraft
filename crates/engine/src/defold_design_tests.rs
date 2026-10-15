@@ -431,3 +431,61 @@ fn generated_node_artwork_stays_with_parent_while_new_empty_layer_is_a_child() {
     assert!(disk.nodes.iter().find(|n| n.id == "button").unwrap().texture.starts_with("pc_"));
     assert!(disk.nodes.iter().all(|n| n.id != format!("pc_node_{generated}")));
 }
+
+#[test]
+fn publication_reuses_content_assets_and_manual_edits_do_not_write_project() {
+    let (dir, mut s) = fixture();
+    let original = std::fs::read(dir.path().join("main.gui")).unwrap();
+    s.execute("paint.stroke", json!({"points":[[40,48]],"size":8,"color":"#ff0000"})).unwrap();
+    s.execute("layer.translate", json!({"dx":4,"dy":0})).unwrap();
+    assert_eq!(std::fs::read(dir.path().join("main.gui")).unwrap(), original);
+    assert!(!dir.path().join("photocraft_generated").exists());
+    s.execute("defold.syncDesign", json!({})).unwrap();
+    fn inventory(dir: &Path) -> std::collections::BTreeMap<std::path::PathBuf, Vec<u8>> {
+        let mut result = std::collections::BTreeMap::new();
+        for entry in std::fs::read_dir(dir).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() { result.extend(inventory(&path)); }
+            else { result.insert(path.clone(), std::fs::read(path).unwrap()); }
+        }
+        result
+    }
+    let assets = dir.path().join("photocraft_generated");
+    let first = inventory(&assets);
+    assert_eq!(first.keys().filter(|p| p.extension().is_some_and(|e| e == "atlas")).count(), 1);
+    assert_eq!(first.keys().filter(|p| p.extension().is_some_and(|e| e == "json")).count(), 1);
+    s.execute("defold.syncDesign", json!({})).unwrap();
+    assert_eq!(first, inventory(&assets), "unchanged sync must reuse every resource");
+    let group = s.active().unwrap().doc.defold.as_ref().unwrap().nodes.iter().find(|n| n.node == "button").unwrap().layer;
+    s.execute("layer.select", json!({"layer":group})).unwrap();
+    s.execute("layer.translate", json!({"dx":8,"dy":0})).unwrap();
+    assert_eq!(first, inventory(&assets), "moving stays local");
+    s.execute("defold.syncDesign", json!({})).unwrap();
+    assert_eq!(first, inventory(&assets), "node placement does not create a new texture version");
+}
+
+#[test]
+fn identical_node_artwork_shares_one_image_and_one_gui_atlas() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("game.project"), "[display]\nwidth=128\nheight=128\n").unwrap();
+    std::fs::write(dir.path().join("main.gui"), r#"nodes {id:"a" position {x:32 y:64} size {x:16 y:16} color {x:0 y:0 z:1}}
+nodes {id:"b" position {x:96 y:64} size {x:16 y:16} color {x:0 y:0 z:1}}"#).unwrap();
+    let mut s = Session::new();
+    s.execute("defold.openDesign", json!({"path":dir.path().join("main.gui")})).unwrap();
+    for (node, x) in [("a",32),("b",96)] {
+        let art = s.active().unwrap().doc.defold.as_ref().unwrap().nodes.iter().find(|n| n.node == node).unwrap().artwork;
+        s.execute("layer.select", json!({"layer":art})).unwrap();
+        s.edit("identical artwork", |doc, _| {
+            doc.layer_mut(LayerId(art)).unwrap().surface_mut().unwrap().fill_rect(Rect::new(x-2,62,x+2,66), &[1.0,0.0,0.0,1.0]);
+            Ok(())
+        }).unwrap();
+    }
+    assert_eq!(s.execute("defold.syncDesign", json!({})).unwrap()["assets"], 2);
+    let out = Scene::parse(std::fs::read_to_string(dir.path().join("main.gui")).unwrap()).unwrap();
+    assert_eq!(out.nodes[0].texture, out.nodes[1].texture);
+    let textures: Vec<_> = out.proto.fields.iter().filter(|f| f.name == "textures").collect();
+    assert_eq!(textures.len(), 1);
+    let atlas = out.proto.text(&textures[0].children, "texture");
+    let atlas = photocraft_defold_format::TextProto::parse(std::fs::read_to_string(dir.path().join(atlas.trim_start_matches('/'))).unwrap()).unwrap();
+    assert_eq!(atlas.fields.iter().filter(|f| f.name == "images").count(), 1);
+}

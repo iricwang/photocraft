@@ -132,9 +132,8 @@ fn auto_select_moves_the_layer_under_the_pointer() {
     actual_pixels(&mut h);
     h.state_mut().ui.tool = Tool::Move;
     h.state_mut().ui.tool_options.move_auto_select = true;
-    // The default target is Group (#4056); these layers sit in groups, and the test is about the
-    // layer under the pointer.
-    h.state_mut().ui.tool_options.move_target = "layer".into();
+    // Grouped artwork must remain individually selectable with the default tool options.
+    assert_eq!(h.state().ui.tool_options.move_target, "layer");
     h.state_mut().run("layer.select", json!({"layer": k.pixel.0})).expect("select");
     h.run_steps(2);
     let (pixel_before, text_before) = (bounds(&h, k.pixel), bounds(&h, k.text));

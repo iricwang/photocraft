@@ -51,15 +51,17 @@ fn drag(app: &mut PhotocraftApp, from: [f64; 2], by: [f64; 2], mods: egui::Modif
 }
 
 #[test]
-fn auto_select_is_on_by_default_with_the_group_target() {
+fn auto_select_is_on_by_default_with_the_layer_target() {
     let o = ToolOptions::default();
     assert!(o.move_auto_select, "Photoshop ships with Auto-Select checked");
-    assert_eq!(o.move_target, "group", "Photoshop defaults Auto-Select to Group (#4056)");
+    assert_eq!(o.move_target, "layer", "pick individual artwork without promoting it to a folder");
     // A saved tool preset that predates the option gets the default too.
     let mut v = serde_json::to_value(&o).unwrap();
     v.as_object_mut().unwrap().remove("move_auto_select");
+    v.as_object_mut().unwrap().remove("move_target");
     let back: ToolOptions = serde_json::from_value(v).unwrap();
     assert!(back.move_auto_select);
+    assert_eq!(back.move_target, "layer");
 }
 
 #[test]
@@ -104,6 +106,99 @@ fn group_mode_picks_and_moves_the_outermost_group() {
     assert_eq!(active(&app), Some(group));
     assert_eq!(bounds(&app, a), Rect::new(8, 18, 24, 34), "moving the group moves its layer");
     assert_eq!(bounds(&app, b), Rect::new(40, 40, 56, 56));
+}
+
+/// Two sibling pieces of artwork inside nested folders.
+fn nested_app() -> (PhotocraftApp, LayerId, LayerId, LayerId, LayerId) {
+    let (mut app, a, b) = app();
+    app.session.execute("layer.select", json!({"layer": a.0})).unwrap();
+    app.session.execute("layer.select", json!({"layer": b.0, "mode": "add"})).unwrap();
+    let inner = LayerId(app.session.execute("layer.new.groupFromLayers", json!({"name": "Inner"})).unwrap()["layer"].as_u64().unwrap());
+    let outer = LayerId(app.session.execute("layer.new.groupFromLayers", json!({"name": "Outer"})).unwrap()["layer"].as_u64().unwrap());
+    (app, a, b, inner, outer)
+}
+
+#[test]
+fn default_layer_mode_picks_a_child_inside_nested_folders() {
+    let (mut app, a, b, _, _) = nested_app();
+    app.session.execute("layer.select", json!({"layer": b.0})).unwrap();
+    drag(&mut app, [16.0, 16.0], [10.0, 4.0], egui::Modifiers::NONE);
+    assert_eq!(active(&app), Some(a));
+    assert_eq!(bounds(&app, a), Rect::new(18, 12, 34, 28));
+    assert_eq!(bounds(&app, b), Rect::new(40, 40, 56, 56));
+}
+
+#[test]
+fn a_folder_left_selected_by_creation_does_not_trap_layer_picking() {
+    let (mut app, a, b, _, _) = nested_app();
+    drag(&mut app, [16.0, 16.0], [10.0, 4.0], egui::Modifiers::NONE);
+    assert_eq!(active(&app), Some(a));
+    assert_eq!(bounds(&app, b), Rect::new(40, 40, 56, 56));
+}
+
+#[test]
+fn switching_from_group_to_layer_mode_releases_an_automatically_picked_folder() {
+    let (mut app, a, b, _, outer) = nested_app();
+    app.ui.tool_options.move_target = "group".into();
+    drag(&mut app, [16.0, 16.0], [0.0, 0.0], egui::Modifiers::NONE);
+    assert_eq!(active(&app), Some(outer));
+    app.ui.tool_options.move_target = "layer".into();
+    drag(&mut app, [16.0, 16.0], [10.0, 4.0], egui::Modifiers::NONE);
+    assert_eq!(active(&app), Some(a));
+    assert_eq!(bounds(&app, b), Rect::new(40, 40, 56, 56));
+}
+
+#[test]
+fn a_child_selected_in_the_panel_does_not_jump_to_its_parent() {
+    let (mut app, a, b, _, _) = nested_app();
+    app.run("layer.select", json!({"layer": a.0})).unwrap();
+    drag(&mut app, [16.0, 16.0], [10.0, 4.0], egui::Modifiers::NONE);
+    assert_eq!(active(&app), Some(a));
+    assert_eq!(bounds(&app, a), Rect::new(18, 12, 34, 28));
+    assert_eq!(bounds(&app, b), Rect::new(40, 40, 56, 56));
+}
+
+#[test]
+fn a_folder_selected_in_the_panel_moves_its_children_in_layer_mode() {
+    let (mut app, a, b, inner, _) = nested_app();
+    app.run("layer.select", json!({"layer": inner.0})).unwrap();
+    drag(&mut app, [16.0, 16.0], [10.0, 4.0], egui::Modifiers::NONE);
+    assert_eq!(active(&app), Some(inner));
+    assert_eq!(bounds(&app, a), Rect::new(18, 12, 34, 28));
+    assert_eq!(bounds(&app, b), Rect::new(50, 44, 66, 60));
+}
+
+#[test]
+fn explicit_group_mode_overrides_a_preselected_child() {
+    let (mut app, a, b, _, outer) = nested_app();
+    app.session.execute("layer.select", json!({"layer": a.0})).unwrap();
+    app.ui.tool_options.move_target = "group".into();
+    drag(&mut app, [16.0, 16.0], [10.0, 4.0], egui::Modifiers::NONE);
+    assert_eq!(active(&app), Some(outer));
+    assert_eq!(bounds(&app, a), Rect::new(18, 12, 34, 28));
+    assert_eq!(bounds(&app, b), Rect::new(50, 44, 66, 60));
+}
+
+#[test]
+fn rollover_and_click_agree_after_selection_changes_without_pointer_motion() {
+    let (mut app, a, b, inner, _) = nested_app();
+    let at = Some([16.0, 16.0]);
+    app.run("layer.select", json!({"layer": inner.0})).unwrap();
+    assert_eq!(crate::move_hover::target(&mut app, at, false, false, false), Some(Rect::new(8, 8, 56, 56)));
+    assert_eq!(app.canvas_hover_layer, Some(inner));
+    // Shift-add targets the child even while its containing group is selected.
+    assert_eq!(crate::move_hover::target(&mut app, at, false, false, true), Some(Rect::new(8, 8, 24, 24)));
+    assert_eq!(app.canvas_hover_layer, Some(a));
+    app.session.execute("layer.select", json!({"layer": b.0})).unwrap();
+    assert_eq!(crate::move_hover::target(&mut app, at, false, false, false), Some(Rect::new(8, 8, 24, 24)));
+    assert_eq!(app.canvas_hover_layer, Some(a));
+    drag(&mut app, [16.0, 16.0], [0.0, 0.0], egui::Modifiers::NONE);
+    assert_eq!(active(&app), app.canvas_hover_layer);
+    app.ui.tool_options.move_target = "group".into();
+    assert!(crate::move_hover::target(&mut app, at, false, false, false).is_some());
+    let hovered = app.canvas_hover_layer;
+    drag(&mut app, [16.0, 16.0], [0.0, 0.0], egui::Modifiers::NONE);
+    assert_eq!(active(&app), hovered);
 }
 
 #[test]
@@ -153,11 +248,11 @@ fn every_theme_shows_the_auto_select_toggle() {
 }
 
 #[test]
-fn every_theme_shows_the_transform_controls_toggle() {
+fn every_theme_shows_the_move_target_and_transform_controls() {
     // #5740: outside the Pro themes the Move tool's options bar had no Show Transform Controls, so
     // a click on a layer never showed its box and handles there.
     use egui_kittest::Harness;
-    use egui_kittest::kittest::Queryable;
+    use egui_kittest::kittest::{NodeT, Queryable};
     for theme in crate::theme::ThemeKind::ALL {
         let (app, _, _) = app();
         let mut h = Harness::builder().with_size(egui::vec2(1400.0, 60.0)).build_ui_state(
@@ -171,6 +266,14 @@ fn every_theme_shows_the_transform_controls_toggle() {
         );
         PhotocraftApp::setup_context(&h.ctx, theme);
         h.run_steps(4);
+        h.query_all_by_role(egui::accesskit::Role::ComboBox)
+            .find(|n| n.accesskit_node().value().as_deref() == Some("Layer") || n.accesskit_node().label().as_deref() == Some("Layer"))
+            .expect("every theme offers Layer / Group selection")
+            .click();
+        h.run_steps(2);
+        h.get_by_label("Group").click();
+        h.run_steps(2);
+        assert_eq!(h.state().ui.tool_options.move_target, "group", "{theme:?}: Group is explicitly selectable");
         let before = h.state().ui.tool_options.move_show_transform;
         h.get_by_label("Show Transform Controls").click();
         h.run_steps(2);

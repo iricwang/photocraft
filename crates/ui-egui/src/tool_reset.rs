@@ -209,9 +209,11 @@ mod tests {
         let ctx = egui::Context::default();
         app.ui.tool_options.move_auto_select = false;
         app.ui.tool_options.feather = 12.0;
+        app.ui.tool_options.move_target = "group".into();
         app.ui.tool = Tool::Move;
         crate::menus::invoke(&mut app, &ctx, RESET, json!({})).unwrap();
         assert!(app.ui.tool_options.move_auto_select, "Move › Auto-Select is back to its default");
+        assert_eq!(app.ui.tool_options.move_target, "layer");
         assert_eq!(app.ui.tool_options.feather, 12.0, "the marquee's Feather is not the Move tool's");
 
         app.ui.tool_options.move_auto_select = false;

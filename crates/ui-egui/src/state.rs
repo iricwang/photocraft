@@ -614,7 +614,7 @@ pub struct ToolOptions {
     #[serde(default = "one")]
     pub marquee_height: f32,
     /// Move tool: Auto-Select (with "layer" or "group" target) and Show Transform Controls.
-    /// Auto-Select is on with the "group" target by default, as in current Photoshop;
+    /// Auto-Select is on with the "layer" target by default, for picking artwork inside folders;
     /// ⌘/Ctrl-click inverts it.
     #[serde(default = "yes")]
     pub move_auto_select: bool,
@@ -731,7 +731,7 @@ fn default_crop_resolution_unit() -> String {
 }
 
 fn default_move_target() -> String {
-    "group".into()
+    "layer".into()
 }
 
 fn default_curve_fit() -> f32 {

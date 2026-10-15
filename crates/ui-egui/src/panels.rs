@@ -1402,6 +1402,13 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
                     Tool::Move => {
                         // The Studio themes keep Photoshop's Auto-Select toggle too (#1275).
                         widgets::checkbox(ui, &mut app.ui.tool_options.move_auto_select, tl!("Auto-Select:"));
+                        widgets::dropdown(
+                            ui,
+                            "move-target",
+                            &mut app.ui.tool_options.move_target,
+                            &[("layer".to_string(), tl!("Layer")), ("group".to_string(), tl!("Group"))],
+                            76.0,
+                        );
                         // And Show Transform Controls (#5740): without it the box could not be
                         // turned on outside the Pro themes.
                         widgets::checkbox(ui, &mut app.ui.tool_options.move_show_transform, tl!("Show Transform Controls"));
@@ -1692,6 +1699,7 @@ pub fn right_dock(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
                 let x = if crate::direction::is_rtl() { r.right() + 6.0 } else { r.left() - 6.0 };
                 ui.painter().line_segment([pos2(x, r.top() - 8.0), pos2(x, r.bottom() + 8.0)], Stroke::new(1.0, t.separator));
                 ui.spacing_mut().item_spacing.y = 4.0;
+                crate::ai_panel::rail_toggle(app, ui, rb);
                 if icons::rail_button(ui, "sliders-horizontal", rb, crate::panel_docking::ai_settings_shown(app), tl!("Model settings")).clicked()
                     && let Err(error) = crate::panel_docking::toggle_ai_settings(app)
                 {

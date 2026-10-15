@@ -143,3 +143,75 @@ fn gui_live_dabs_and_commit_reuse_outside_textures_and_unseen_edits_rebuild() {
     assert_ne!(ids, cache(&app, &ctx).bands.iter().map(|b| b.2.id()).collect::<Vec<_>>());
     verify(&mut app, &ctx, &images);
 }
+
+#[test]
+fn gui_move_preview_patches_off_canvas_pixels_without_reallocating() {
+    let (dir, mut app) = gui(160, 80);
+    let disk = std::fs::read(dir.path().join("scene.gui")).unwrap();
+    app.sync_views();
+    app.ui.tool = Tool::Move;
+    app.ui.extras.snap = false;
+    app.ui.view.show.smart_guides = false;
+    let ctx = egui::Context::default();
+    let mut images = std::collections::HashMap::new();
+    apply_images(&mut draw(&mut app, &ctx), &mut images);
+    let ids: Vec<_> = cache(&app, &ctx).bands.iter().map(|b| b.2.id()).collect();
+    let m = egui::Modifiers::NONE;
+    tool_event(&mut app, ToolEvent::Down { x: -200.0, y: 280.0, pressure: 1.0 }, m);
+    for x in [-190.0, -180.0, -210.0] {
+        tool_event(&mut app, ToolEvent::Move { x, y: 280.0, pressure: 1.0 }, m);
+        let mut out = draw(&mut app, &ctx);
+        assert_eq!(ids, cache(&app, &ctx).bands.iter().map(|b| b.2.id()).collect::<Vec<_>>());
+        assert!(out.textures_delta.set.values().flatten().all(|d| d.pos.is_some()));
+        apply_images(&mut out, &mut images);
+        verify(&mut app, &ctx, &images);
+    }
+    tool_event(&mut app, ToolEvent::Up { x: -210.0, y: 280.0 }, m);
+    apply_images(&mut draw(&mut app, &ctx), &mut images);
+    verify(&mut app, &ctx, &images);
+    app.run("edit.undo", json!({})).unwrap();
+    apply_images(&mut draw(&mut app, &ctx), &mut images);
+    verify(&mut app, &ctx, &images);
+    assert_eq!(std::fs::read(dir.path().join("scene.gui")).unwrap(), disk);
+    assert!(!dir.path().join("photocraft_generated").exists());
+}
+
+#[test]
+#[ignore = "GUI move component benchmark"]
+fn gui_move_refresh_benchmark() {
+    for full in [true, false] {
+        let (_dir, mut app) = gui(2340, 1080);
+        if let Ok(path) = std::env::var("PHOTOCRAFT_GUI_BENCH_PATH") {
+            app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+            app.run("defold.openDesign", json!({"path":path})).unwrap();
+            let layer = app.session.active().unwrap().doc.defold.as_ref().unwrap().nodes.iter().find(|n| n.node == "ui_window_bg_title").unwrap().artwork;
+            app.run("layer.select", json!({"layer":layer})).unwrap();
+        }
+        app.sync_views();
+        app.ui.tool = Tool::Move;
+        app.ui.extras.snap = false;
+        app.ui.view.show.smart_guides = false;
+        let st = app.session.active().unwrap();
+        let bounds = st.doc.layer(st.active_layer.unwrap()).unwrap().surface().unwrap().content_bounds();
+        let (x,y) = ((bounds.x0 + bounds.x1) as f64 / 2.0, (bounds.y0 + bounds.y1) as f64 / 2.0);
+        let id = st.doc.id;
+        let ctx = egui::Context::default();
+        draw(&mut app, &ctx).textures_delta.clear();
+        let m = egui::Modifiers::NONE;
+        tool_event(&mut app, ToolEvent::Down { x,y,pressure:1.0 },m);
+        let mut times = Vec::new();
+        let mut pixels = 0;
+        for step in 1..=8 {
+            tool_event(&mut app, ToolEvent::Move { x:x+step as f64,y,pressure:1.0 },m);
+            if full { ctx.data_mut(|d| d.remove::<BeyondCanvas>(egui::Id::new(("crop-beyond-canvas",id.0,None::<u32>)))); }
+            let start = std::time::Instant::now();
+            let mut out = draw(&mut app,&ctx);
+            times.push(start.elapsed().as_secs_f64()*1000.0);
+            pixels += out.textures_delta.set.values().flatten().map(|d| d.image.width()*d.image.height()).sum::<usize>();
+            out.textures_delta.clear();
+        }
+        times.sort_by(f64::total_cmp);
+        println!("GUI_MOVE full={full} median_ms={:.3} max_ms={:.3} uploaded_pixels={pixels}",times[4],times[7]);
+        println!("GUI_MOVE_SPANS {:?}", app.perf.spans);
+    }
+}

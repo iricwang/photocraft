@@ -74,3 +74,36 @@ The older independent GUI commands remain for compatibility and bridge diagnosti
 All other painting, erasing, layers, text, saving and AI operations use existing engine commands.
 
 Regression coverage includes native painting/erasing/undo, source reopening, painted pixels followed by property edits, child creation/deletion/undo, conflict rejection, native text publication, invalid properties, project picker paths and AI completion after document switching. `defold_native_probe` is restricted to the workspace-owned `plan/defold-live-project/photocraft_live_validation.gui`; it checks native drawing through live texture registration, graph publication, Defold save and source reopening without touching the actual game.
+
+
+## Manual publication and game texture ownership
+
+Move Auto-Select defaults to **Layer** so a node's artwork remains directly selectable inside
+folders. Switch the options bar to **Group** for automatic whole-group selection, or explicitly
+select the desired folder in Layers and drag its visible artwork. Selecting a child in Layers
+keeps that child when dragging it. The mode is remembered across restarts; Reset Tool restores
+Layer. Hovering artwork previews the same target by outline and name. A folder selected merely
+by import or an earlier Group-mode click does not prevent returning to individual artwork.
+
+Native GUI edits, moves, brush strokes and undo operate on the local PhotoCraft document. They do not request editor snapshots, encode PNGs or write game assets. Only `defold.syncDesign` publishes; opening a linked source may read the editor baseline and explicitly opening a resource may contact the editor.
+
+Generated assets live under `/photocraft_generated/<gui-name>_<project-relative-GUI-hash>/`. `images/img_<content-hash>.png` identifies the actual PNG bytes, independent of document history, node placement or the checkout location. Identical images from multiple nodes share a file. A GUI publication uses one shared atlas for its changed artwork, with two-pixel extrusion and padding. `atlases/<content-hash>.atlas` changes only when its image set changes. Unmodified imported resources continue using their original atlases.
+
+`manifests/<content-hash>.json` records the source GUI, atlas and node-to-image mapping, dimensions and content hashes. These are immutable publication manifests, not editable source files. The `.gui.pcraft` remains the editable source; original game textures are never overwritten. Unchanged publication reuses existing files without rewriting them. Node movement alone does not create new image versions. Older generated versions are retained for undo, previous GUI references and version-control recovery; do not delete them by age or filename alone. Future cleanup must trace every project GUI/atlas and retained publication before presenting unreferenced resources for explicit removal. Texture compression profiles remain owned by the Defold project.
+
+The scene renderer reuses off-canvas textures during Move previews and patches the union of previous/current bounds, including negative coordinates. A bounded transparent margin avoids reallocating textures for every pixel crossing the old scene edge. Unknown changes, large extent changes and undo retain a full-render fallback. GUI properties cache the parsed source until its source text or native text changes.
+
+
+## IP binding and remote projects
+
+PhotoCraft and Defold now have a dedicated binding channel, separate from the general control server and the editor's session token. PhotoCraft listens on TCP 17655; Defold listens on TCP 17654. Both accept an IP address with an optional port. `PHOTOCRAFT_BIND_PORT` and `-Ddefold.craft.port` override the respective listeners for multiple instances. This transport is intended for a trusted local network; it uses HTTP and does not encrypt project resources.
+
+In PhotoCraft, open **Window → Defold Sync**, enter the Defold IP and select **Bind Defold**. In Defold, use **File → Bind PhotoCraft by IP**. Unbound applications periodically discover the other application on loopback. Automatic discovery does not take over an application already bound to another peer. A changed binding requires confirmation on the receiving side; each side with open files asks to save or close them. PhotoCraft reuses its per-document Save / Discard / Cancel prompts. Defold provides Save All and Close or closing already saved tabs, and refuses to switch while dirty resources remain. Cancellation, an expired ticket, unfinished workers, a save failure, or an open workspace prevents the switch. The old session is revoked after a successful change.
+
+Defold owns the project. After confirmation it transfers a resource manifest and file contents into a per-project PhotoCraft cache. Every file is checked with SHA-256 before atomic installation. The cache persists across application restarts; editable `.gui.pcraft` files are retained and never downloaded over. Editor tokens, hidden directories, build output, symlinks and native PhotoCraft sources are excluded. Transfer limits are 20,000 files, 64 MiB per resource, 1 GiB per project and 128 directory levels. Files outside the project and path traversal are rejected. Projects depending on excluded directories or external linked files require those resources to be made available as ordinary project files.
+
+The Sync panel lists the transferred GUI resources and also accepts a project-relative GUI path. **Open GUI in both editors** opens the corresponding Defold workspace tab before PhotoCraft imports the design. Reopening a linked native source does the same. Defold's **File → Open GUI in PhotoCraft** sends its active GUI to the bound instance. **Refresh Project Resources** fetches current project files after external resource changes; a newly created GUI may require this refresh before opening in PhotoCraft.
+
+Manual synchronization retains its existing conflict checks. PhotoCraft uploads only immutable files under `photocraft_generated/`; different bytes at an existing path are rejected. It then applies the GUI through the bound Defold editor. Remote caches always require their live binding: they never silently fall back to offline publication into the cache. Save the edited GUI in Defold after publication as before.
+
+Validation: desktop application compilation, isolated production Rust transport tests, production Clojure route tests with a headless UI adapter, cross-language HTTP binding in both directions, project download / digest checks / generated asset upload / session revocation, and an offscreen PhotoCraft panel capture. Full Defold UI interaction, cross-machine firewall behavior and incremental patch installation still require a running editor environment.

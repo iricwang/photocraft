@@ -1,6 +1,8 @@
--- Executed only against the user's authenticated, loopback Defold editor.
+-- Executed only against the user's bound or authenticated local Defold editor.
 -- No file writes: GUI mutations use the editor's own atomic graph transaction.
 local req = REQUEST
+-- Keep the linked resource open in the Defold workspace before reading or editing it.
+editor.ui.open_resource(req.path)
 local refs, parents = {}, {}
 local function plain(v, depth)
     if depth > 12 then error("Property nesting limit") end
@@ -51,7 +53,7 @@ end
 local current = snapshot()
 if req.op == "publishDesign" then
     assert(same(current.nodes, req.expected), "GUI changed in Defold; nothing was overwritten")
-    assert(type(req.directory)=="string" and string.match(req.directory,"^/photocraft_generated/[%w/]+$"), "Invalid generated directory")
+    assert(type(req.directory)=="string" and string.match(req.directory,"^/photocraft_generated/[%w_/]+$"), "Invalid generated directory")
     local wanted, ordered = {}, req.nodes
     assert(type(ordered)=="table" and #ordered<=8192,"Node limit")
     for _,n in ipairs(ordered) do assert(not wanted[n.id],"Duplicate node ID"); wanted[n.id]=n end

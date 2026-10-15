@@ -88,6 +88,22 @@ pub fn auto_select_target(doc: &Document, x: i32, y: i32, group: bool) -> Option
     Some(if group { top_group(doc, hit) } else { hit })
 }
 
+/// Move-tool picking keeps an explicitly selected containing group in Layer mode. Group mode
+/// remains explicit, and only the topmost visible hit can retain a selection (never an occluded
+/// layer or the empty space inside a group's bounding box). Shift-add passes no selection.
+pub fn move_select_target(doc: &Document, x: i32, y: i32, group: bool, selected: &[LayerId]) -> Option<LayerId> {
+    let hit = auto_select_target(doc, x, y, group)?;
+    if group || selected.is_empty() {
+        return Some(hit);
+    }
+    let path = doc.path_of(hit)?;
+    let selected_parent = (1..=path.len()).rev().find_map(|n| {
+        let layer = path.get(..n).and_then(|p| doc.layer_at(p))?;
+        selected.contains(&layer.id).then_some(layer.id)
+    });
+    Some(selected_parent.unwrap_or(hit))
+}
+
 fn pick(s: &mut Session, p: &Value) -> Result<Value> {
     let x = p.get("x").and_then(Value::as_f64).ok_or_else(|| EngineError::BadParams { cmd: "layer.pickAt".into(), msg: "missing `x`".into() })?.floor() as i32;
     let y = p.get("y").and_then(Value::as_f64).ok_or_else(|| EngineError::BadParams { cmd: "layer.pickAt".into(), msg: "missing `y`".into() })?.floor() as i32;
@@ -99,9 +115,14 @@ fn pick(s: &mut Session, p: &Value) -> Result<Value> {
         return Ok(json!({ "layers": names }));
     }
     let group = p.get("target").and_then(Value::as_str) == Some("group");
-    let Some(target) = auto_select_target(&doc, x, y, group) else { return Ok(json!({ "layer": null })) };
+    let mode = p.get("mode").and_then(Value::as_str).unwrap_or("replace");
+    let selected = if mode == "replace" && p.get("keepSelected").and_then(Value::as_bool).unwrap_or(false) {
+        s.active().map(|st| st.selected_layers()).unwrap_or_default()
+    } else {
+        Vec::new()
+    };
+    let Some(target) = move_select_target(&doc, x, y, group, &selected) else { return Ok(json!({ "layer": null })) };
     if p.get("select").and_then(Value::as_bool).unwrap_or(true) {
-        let mode = p.get("mode").and_then(Value::as_str).unwrap_or("replace");
         // Like Photoshop, a plain click on one of several selected layers keeps them all
         // selected, so the drag that follows moves the whole selection.
         let keeps = mode == "replace" && s.active().is_some_and(|st| st.is_layer_selected(target) && st.selected_layers().len() > 1);
@@ -190,7 +211,7 @@ pub fn specs() -> Vec<CommandSpec> {
             label: "Auto-Select Layer",
             menu: &[],
             shortcut: None,
-            params: r##"{"x":px,"y":px,"target":"layer|group"="layer","select":bool=true,"mode":"replace|toggle|add"="replace","list":bool=false (return visible layers at the point, including text bounds, topmost first)} → {layer} | {layers}"##,
+            params: r##"{"x":px,"y":px,"target":"layer|group"="layer","select":bool=true,"mode":"replace|toggle|add"="replace","keepSelected":bool=false (retain a selected containing group in layer/replace mode),"list":bool=false (return visible layers at the point, including text bounds, topmost first)} → {layer} | {layers}"##,
             enabled: has_doc,
             journal: false,
             run: pick,
@@ -237,6 +258,30 @@ mod tests {
         }
         s.execute("select.deselect", json!({})).unwrap();
         (s, ids[0], ids[1])
+    }
+
+    #[test]
+    fn move_pick_keeps_only_an_explicitly_selected_containing_folder() {
+        let (mut s, a, b) = two_squares();
+        s.execute("layer.select", json!({"layer": a.0})).unwrap();
+        let inner = s.execute("layer.new.groupFromLayers", json!({"name": "Inner"})).unwrap()["layer"].as_u64().unwrap();
+        let outer = s.execute("layer.new.groupFromLayers", json!({"name": "Outer"})).unwrap()["layer"].as_u64().unwrap();
+        s.execute("layer.select", json!({"layer": inner})).unwrap();
+        let pick = |s: &mut Session, params: Value| s.execute("layer.pickAt", params).unwrap()["layer"].clone();
+        assert_eq!(pick(&mut s, json!({"x": 5, "y": 5, "select": false})), a.0, "ordinary picking still targets artwork");
+        assert_eq!(pick(&mut s, json!({"x": 5, "y": 5, "select": false, "keepSelected": true})), inner);
+        assert_eq!(s.active().unwrap().active_layer, Some(LayerId(inner)), "a probe cannot select");
+        assert_eq!(pick(&mut s, json!({"x": 25, "y": 25, "select": false, "keepSelected": true})), b.0, "an unrelated folder cannot steal a hit");
+        assert_eq!(pick(&mut s, json!({"x": 5, "y": 5, "select": false, "keepSelected": true, "mode": "add"})), a.0);
+        assert_eq!(pick(&mut s, json!({"x": 5, "y": 5, "select": false, "keepSelected": true, "target": "group"})), outer);
+        // Another piece of artwork above the selected folder wins the hit test.
+        s.execute("layer.select", json!({"layer": b.0})).unwrap();
+        s.execute("layer.translate", json!({"dx": -20, "dy": -20})).unwrap();
+        s.execute("layer.select", json!({"layer": inner})).unwrap();
+        assert_eq!(pick(&mut s, json!({"x": 5, "y": 5, "select": false, "keepSelected": true})), b.0);
+        s.execute("layer.setProps", json!({"layer": b.0, "visible": false})).unwrap();
+        s.execute("layer.setProps", json!({"layer": outer, "visible": false})).unwrap();
+        assert_ne!(pick(&mut s, json!({"x": 5, "y": 5, "select": false, "keepSelected": true})), inner, "hidden folders are skipped");
     }
 
     #[test]

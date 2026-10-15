@@ -12,6 +12,7 @@ pub fn panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 }
 
 pub fn sync_panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+    crate::peer_binding_ui::panel(app, ui);
     let Some((doc_id, link)) = app.session.active().and_then(|st| st.doc.defold.as_ref().map(|link| (st.doc.id.0, link.clone()))) else {
         ui.label(tl!("Open a linked Defold GUI to synchronize"));
         return;
@@ -115,9 +116,35 @@ fn color(ui: &mut egui::Ui, scene: &Scene, node: &str, key: &str, out: &mut serd
         }
     }
 }
+// Pointer motion and painting do not alter the authored GUI schema. Parse it only
+// when its source or native text changes, rather than on every panel repaint.
+#[derive(Clone)]
+struct PropertyScene {
+    source: String,
+    text: Vec<(u64, String)>,
+    scene: std::sync::Arc<Scene>,
+}
+fn property_scene(app: &PhotocraftApp, ctx: &egui::Context) -> Option<std::sync::Arc<Scene>> {
+    let doc = &app.session.active()?.doc;
+    let link = doc.defold.as_ref()?;
+    let text: Vec<_> = link.nodes.iter().filter_map(|b| {
+        match &doc.layer(photocraft_doc::LayerId(b.artwork))?.content {
+            photocraft_doc::LayerContent::Text(t) => Some((b.artwork, t.text.clone())),
+            _ => None,
+        }
+    }).collect();
+    let key = egui::Id::new(("defold-property-scene", doc.id.0));
+    if let Some(c) = ctx.data(|d| d.get_temp::<PropertyScene>(key))
+        && c.source == link.source && c.text == text {
+        return Some(c.scene);
+    }
+    let scene = std::sync::Arc::new(photocraft_engine::defold_design::scene(&app.session).ok()?);
+    ctx.data_mut(|d| d.insert_temp(key, PropertyScene { source: link.source.clone(), text, scene: scene.clone() }));
+    Some(scene)
+}
 pub fn properties(app: &mut PhotocraftApp, ui: &mut egui::Ui) -> bool {
     let Some(binding) = photocraft_engine::defold_design::selected(&app.session).cloned() else { return false };
-    let Ok(scene) = photocraft_engine::defold_design::scene(&app.session) else { return false };
+    let Some(scene) = property_scene(app, ui.ctx()) else { return false };
     let Some(node) = scene.nodes.iter().find(|n| n.id == binding.node) else { return false };
     let mut updates = serde_json::Map::new();
     let schema = photocraft_defold_format::properties(&node.kind);

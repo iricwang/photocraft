@@ -2,6 +2,7 @@
 
 pub static ICONS: &[(&str, &[u8])] = &[
     ("adjustment-layer", include_bytes!("../../../assets/icons/adjustment-layer.svg")),
+    ("ai-studio", include_bytes!("../../../assets/icons/ai-studio.svg")),
     ("align-center", include_bytes!("../../../assets/icons/align-center.svg")),
     ("align-justify", include_bytes!("../../../assets/icons/align-justify.svg")),
     ("align-left", include_bytes!("../../../assets/icons/align-left.svg")),

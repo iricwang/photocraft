@@ -496,14 +496,10 @@ fn shift_shown(doc: &Document, l: &mut Layer, dx: i32, dy: i32) {
 /// The document pixels an edit of the layers `ids` (moved, shown, hidden or restyled; contents
 /// otherwise as they were) can have changed from `before` to `after`, or `None` for anywhere.
 pub fn layers_damage(before: &Document, after: &Document, ids: &[LayerId]) -> Option<Rect> {
-    // change_bounds clips to the image canvas. A linked GUI also displays pixels
-    // outside it; until these operations report scene-wide damage, refresh fully.
-    if before.defold.is_some() || after.defold.is_some() {
-        return None;
-    }
     let mut out = Rect::EMPTY;
     for d in [before, after] {
-        let canvas = d.bounds();
+        // GUI scenes display off-canvas pixels; retain both the old and new extents.
+        let canvas = if d.defold.is_some() { Rect::new(i32::MIN / 2, i32::MIN / 2, i32::MAX / 2, i32::MAX / 2) } else { d.bounds() };
         for id in ids {
             // A layer gone from one side (never for a move) changes who knows what.
             let b = photocraft_compose::change_bounds(d.layer(*id)?, canvas)?;

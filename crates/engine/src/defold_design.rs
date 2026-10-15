@@ -273,6 +273,9 @@ pub fn prepare_open(doc: &mut Document) -> Result<Vec<String>> {
     if !(1..=3).contains(&link.version) {
         return Err(err("Unsupported GUI design version"));
     }
+    if crate::peer_binding::active_for(&link.root)?.is_some() {
+        crate::defold_live::request(&link.root, &json!({"op":"snapshot", "path":resource_path(&link.root, &link.gui)?}))?;
+    }
     let size = match linked_design_size(doc) {
         Ok(size) => size,
         Err(e) => return Ok(vec![format!("Cannot verify the GUI canvas against game.project; keeping the saved source: {e}")]),
@@ -649,6 +652,9 @@ fn open(s: &mut Session, p: &Value) -> Result<Value> {
     source.execute("defold.openGui", json!({"path":string(p,"path")?}))?;
     let d = source.active_gui().ok_or_else(|| err("GUI open failed"))?;
     let gui = d.path.clone();
+    if crate::peer_binding::active_for(&d.root)?.is_some() {
+        crate::defold_live::request(&d.root, &json!({"op":"snapshot", "path":resource_path(&d.root, &gui)?}))?;
+    }
     if let Some(i) = s.documents().iter().position(|st| st.doc.defold.as_ref().is_some_and(|d| d.gui == gui)) {
         s.set_active(i);
         return Ok(json!({"document":i,"restored":true}));
@@ -688,7 +694,7 @@ fn open(s: &mut Session, p: &Value) -> Result<Value> {
     }
     let mut remote = None;
     let mut warnings = Vec::new();
-    if Path::new(&d.root).join(".internal/editor.port").is_file() {
+    if crate::peer_binding::online(&d.root) {
         if let Err(e) = source.execute("defold.connectLive", json!({})) {
             warnings.push(format!("Opening saved GUI: {e}"));
         }
@@ -1027,7 +1033,7 @@ fn sync(s: &mut Session, _: &Value) -> Result<Value> {
     let target = crate::defold_cmds::resource(&original.root, &resource_path(&original.root, &original.gui)?)?;
     let disk = crate::file_cmds::read_file(&target.to_string_lossy())?;
     let expected = s.gui.design_stamps.get(&original.gui).cloned().unwrap_or((original.disk_hash.clone(), original.remote.clone()));
-    let online = Path::new(&original.root).join(".internal/editor.port").is_file();
+    let online = crate::peer_binding::online(&original.root);
     let path = resource_path(&original.root, &original.gui)?;
     let remote = if online {
         let expected_remote: crate::defold_live::Snapshot = if let Some(baseline) = expected.1.as_deref() {
@@ -1066,11 +1072,16 @@ fn sync(s: &mut Session, _: &Value) -> Result<Value> {
     crate::color_cmds::convert_document(&mut export_doc, photocraft_cms::Builtin::Srgb.profile(), photocraft_cms::Intent::RelativeColorimetric, true)?;
     let mut output = authored.clone();
     let draft = photocraft_format::save_to_bytes(&doc, &Default::default()).map_err(err)?;
-    let folder = format!(
-        "/photocraft_generated/{}/{}",
-        hash(original.gui.as_bytes()).chars().take(12).collect::<String>(),
-        hash(&draft).chars().take(16).collect::<String>()
-    );
+    // Identity is project-relative, so a checkout moved to another computer reuses assets.
+    // Pixel content, not document history or node placement, determines resource versions.
+    let gui_resource = resource_path(&original.root, &original.gui)?;
+    let gui_key: String = hash(gui_resource.as_bytes()).chars().take(16).collect();
+    let gui_name: String = Path::new(&gui_resource).file_stem().and_then(|s| s.to_str()).unwrap_or("gui")
+        .chars().take(48).map(|c| if c.is_ascii_alphanumeric() { c.to_ascii_lowercase() } else { '_' }).collect();
+    let folder = format!("/photocraft_generated/{gui_name}_{gui_key}");
+    let atlas_alias = format!("pc_{}", gui_key);
+    let mut images = std::collections::BTreeMap::new();
+    let mut asset_nodes = Vec::new();
     let mut files = Vec::new();
     let mut textures = Vec::new();
     let mut new_world = HashMap::new();
@@ -1140,13 +1151,12 @@ fn sync(s: &mut Session, _: &Value) -> Result<Value> {
         let pixels = local_buffer.to_rgba8();
         let image = photocraft_codecs::Image::from_u8(r.width(), r.height(), photocraft_codecs::ChannelLayout::Rgba, pixels.pixels).map_err(err)?;
         let png = photocraft_codecs::encode(&image, photocraft_codecs::Format::Png, &Default::default()).map_err(err)?;
-        let stem = format!("node_{}", b.layer);
-        let alias = format!("pc_{}", b.layer);
-        let png_path = format!("{folder}/{stem}.png");
-        let atlas_path = format!("{folder}/{stem}.atlas");
-        files.push((png_path.clone(), png));
-        files.push((atlas_path.clone(), format!("images {{ image: {} }}\nextrude_borders: 2\n", serde_json::to_string(&png_path).map_err(err)?).into_bytes()));
-        textures.push(json!({"name":alias,"texture":atlas_path}));
+        let digest = hash(&png);
+        let stem = format!("img_{digest}");
+        let alias = &atlas_alias;
+        let png_path = format!("{folder}/images/{stem}.png");
+        images.insert(png_path.clone(), png);
+        asset_nodes.push(json!({"node":b.node,"image":png_path,"hash":digest,"width":r.width(),"height":r.height()}));
         output = node_kind(&output, &b.node, "TYPE_BOX")?;
         output = output.edit(&b.node, "inherit_alpha", &json!(false)).map_err(err)?;
         for (k, v) in [
@@ -1183,6 +1193,19 @@ fn sync(s: &mut Session, _: &Value) -> Result<Value> {
         output = output.edit(&n.id, "position.x", &json!(p.x)).map_err(err)?;
         output = output.edit(&n.id, "position.y", &json!(p.y)).map_err(err)?;
     }
+    if !images.is_empty() {
+        let mut atlas = String::new();
+        for image in images.keys() {
+            atlas.push_str(&format!("images {{ image: {} }}\n", serde_json::to_string(image).map_err(err)?));
+        }
+        atlas.push_str("extrude_borders: 2\ninner_padding: 2\n");
+        let atlas_path = format!("{folder}/atlases/{}.atlas", hash(atlas.as_bytes()));
+        files.extend(images);
+        files.push((atlas_path.clone(), atlas.into_bytes()));
+        textures.push(json!({"name":atlas_alias,"texture":atlas_path}));
+        let manifest = serde_json::to_vec_pretty(&json!({"version":1,"gui":gui_resource,"atlas":atlas_path,"nodes":asset_nodes})).map_err(err)?;
+        files.push((format!("{folder}/manifests/{}.json", hash(&manifest)), manifest));
+    }
     let aliases: Vec<_> = textures.iter().filter_map(|v| v["name"].as_str()).collect();
     let mut raw = output.proto.source.clone();
     for f in output.proto.fields.iter().rev().filter(|f| f.name == "textures" && aliases.contains(&output.proto.text(&f.children, "name").as_str())) {
@@ -1198,6 +1221,8 @@ fn sync(s: &mut Session, _: &Value) -> Result<Value> {
     for (path, bytes) in &files {
         output_file(&original.root, path, bytes)?;
     }
+    #[cfg(not(target_arch = "wasm32"))]
+    crate::peer_binding::native::upload(&original.root, &files)?;
     let next_remote = if let Some(remote) = remote {
         let snap = crate::defold_live::request(
             &original.root,
@@ -1227,7 +1252,7 @@ fn sync(s: &mut Session, _: &Value) -> Result<Value> {
         st.doc = Arc::new(doc);
         st.saved_to(source_path);
     }
-    Ok(json!({"synced":true,"online":online,"assets":files.len()/2,"nodes":output.nodes.len(),"editorSaveRequired":online,"warnings":canvas_warnings}))
+    Ok(json!({"synced":true,"online":online,"assets":asset_nodes.len(),"nodes":output.nodes.len(),"editorSaveRequired":online,"warnings":canvas_warnings}))
 }
 
 pub fn specs() -> Vec<CommandSpec> {

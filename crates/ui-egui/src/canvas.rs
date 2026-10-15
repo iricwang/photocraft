@@ -4555,7 +4555,7 @@ fn draw_beyond_canvas(app: &mut PhotocraftApp, painter: &egui::Painter, xf: &Vie
     let doc_key = preview_key ^ display_key;
     let cached: Option<BeyondCanvas> = ctx.data(|d| d.get_temp(key));
     let damage = cached.as_ref().filter(|c| gui && c.display_key == display_key && c.bounds == doc.bounds())
-        .filter(|c| (preview_key == 0 && c.key == display_key) || live_stroke(app, idx).is_some()
+        .filter(|c| (preview_key == 0 && c.key == display_key) || crate::move_ui::showing(app) || live_stroke(app, idx).is_some()
             || app.committed_stroke.as_ref().is_some_and(|stroke| stroke.doc == id && stroke.revision == revision && stroke.since(c.key ^ display_key).is_some()))
         .and_then(|c| damage_since(app, idx, (c.revision, c.key), (revision, preview_key), display_key, last_damage));
     let c = match (cached, damage) {
@@ -4592,6 +4592,11 @@ fn draw_beyond_canvas(app: &mut PhotocraftApp, painter: &egui::Painter, xf: &Vie
             } else {
                 photocraft_engine::extra_cmds::reveal_all_bounds(&doc)
             };
+            // Reserve a bounded transparent margin: a drag crossing the previous
+            // scene edge must not allocate/upload every outside texture each pixel.
+            let padded = extent.inflate(128);
+            let extent = if gui && padded.width() <= 16384 && padded.height() <= 16384
+                && u64::from(padded.width()) * u64::from(padded.height()) <= 64 * 1024 * 1024 { padded } else { extent };
             // Leave one texel for rounding negative scene coordinates outwards.
             let max_side = (ctx.input(|i| i.max_texture_side) as u32).min(MAX_TEXTURE).saturating_sub(1).max(1);
             let k = extent.width().max(extent.height()).div_ceil(max_side).max(1);
@@ -5307,11 +5312,12 @@ pub fn tool_event(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifiers)
             if !crate::move_ui::moves_selected_pixels_with(app, tool) && app.ui.tool_options.move_auto_select != mods.command {
                 let target = app.ui.tool_options.move_target.clone();
                 let mode = if mods.shift { "add" } else { "replace" };
+                let keep_selected = crate::move_hover::keeps_selection(app);
                 let before = app.session.active().map(|st| st.selected_layers());
                 // A locked layer under the pointer (the Background) can't move. Photoshop draws
                 // the layer marquee instead of reporting the lock (#4058). Probe without
                 // selecting so a locked hit doesn't become the selection first.
-                let probe = app.run("layer.pickAt", json!({"x": x, "y": y, "target": target, "select": false}));
+                let probe = app.run("layer.pickAt", json!({"x": x, "y": y, "target": target, "mode": mode, "keepSelected": keep_selected, "select": false}));
                 let locked_hit = probe.as_ref().ok().and_then(|v| v["layer"].as_u64()).is_some_and(|id| {
                     app.session.active().is_some_and(|st| {
                         let id = photocraft_doc::LayerId(id);
@@ -5323,12 +5329,12 @@ pub fn tool_event(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifiers)
                     if locked_hit {
                         // A click still selects the locked layer, as in Photoshop; a drag's
                         // marquee then replaces that selection on release.
-                        let _ = app.run("layer.pickAt", json!({"x": x, "y": y, "target": target, "mode": mode}));
+                        let _ = app.run("layer.pickAt", json!({"x": x, "y": y, "target": target, "mode": mode, "keepSelected": keep_selected}));
                     }
                     crate::move_box::begin(app, [x, y], mods.shift);
                     return;
                 }
-                let picked = app.run("layer.pickAt", json!({"x": x, "y": y, "target": target, "mode": mode}));
+                let picked = app.run("layer.pickAt", json!({"x": x, "y": y, "target": target, "mode": mode, "keepSelected": keep_selected}));
                 // No pixels there at all (an empty spot, or off the canvas): drag a marquee that
                 // selects the layers it touches instead (move_box.rs).
                 if picked.is_ok_and(|v| v["layer"].is_null()) && crate::move_box::empty_at(app, [x, y]) {
@@ -8200,7 +8206,7 @@ mod tests {
         output.textures_delta.clear();
         let key = egui::Id::new(("crop-beyond-canvas", doc.id.0, None::<u32>));
         let cached = ctx.data(|d| d.get_temp::<BeyondCanvas>(key)).unwrap();
-        assert_eq!(cached.extent, DRect::new(-46, 0, 160, 108));
+        assert_eq!(cached.extent, DRect::new(-46, 0, 160, 108).inflate(128), "texture reserve does not change the reference frame or fitted camera");
         assert!(cached.bands.iter().any(|(r, _, _)| r.x0 < 0));
     }
 

@@ -12,6 +12,64 @@ fn paints_text(shape: &egui::epaint::Shape, text: &str) -> bool {
 }
 
 #[test]
+fn composer_collapses_into_the_window_rail_and_restores_its_draft() {
+    let _language = crate::i18n::language_scope(crate::i18n::Lang::EN);
+    assert!(icons::exists("ai-studio"));
+    for theme in theme::ThemeKind::ALL {
+        for (width, height) in [(800.0, 600.0), (1280.0, 720.0)] {
+            let mut app = PhotocraftApp::new(Session::new(), Default::default());
+            app.ui.ai.enabled = false;
+            app.ui.ai.prompt = "Keep this unfinished request".into();
+            app.ui.ai.status = "Keep the last generation result".into();
+            let mut ready = false;
+            let mut harness = egui_kittest::Harness::builder().with_size(egui::vec2(width, height)).build_ui_state(
+                move |ui, app: &mut PhotocraftApp| {
+                    if !ready {
+                        PhotocraftApp::setup_context(ui.ctx(), theme);
+                        ready = true;
+                        return;
+                    }
+                    ui.ctx().all_styles_mut(|style| style.animation_time = 0.0);
+                    crate::panels::right_dock(app, ui);
+                    app.last_canvas_rect = ui.available_rect_before_wrap();
+                    super::show(app, ui);
+                },
+                app,
+            );
+            harness.run_steps(5);
+            let rail = harness.get_by_label("Hide AI Studio").rect();
+            assert!(
+                rail.left() >= harness.state().last_canvas_rect.right() && rail.right() <= width && rail.bottom() < height / 2.0,
+                "AI restores from the window rail beside the canvas: {rail:?}"
+            );
+            harness.get_by_label("Collapse AI Studio").click();
+            harness.run_steps(4);
+            assert!(!harness.state().ui.ai.visible);
+            assert!(harness.query_by_label("Prompt").is_none());
+            assert!(harness.query_by_label("Generate image").is_none());
+            assert_eq!(harness.get_by_label("Show AI Studio").rect(), rail, "the restore switch must stay in the rail");
+            if let Some(dir) = std::env::var_os("PHOTOCRAFT_AI_RAIL_OUT") {
+                std::fs::create_dir_all(&dir).unwrap();
+                harness.render().unwrap().save(std::path::PathBuf::from(dir).join(format!("ai-collapsed-{}-{width}.png", theme.id()))).unwrap();
+            }
+            harness.get_by_label("Show AI Studio").click();
+            harness.run_steps(5);
+            assert!(harness.state().ui.ai.visible);
+            assert!(!harness.state().ui.ai.enabled, "restoring the toolbar must not turn AI on");
+            assert_eq!(harness.state().ui.ai.prompt, "Keep this unfinished request");
+            assert_eq!(harness.state().ui.ai.status, "Keep the last generation result");
+            assert!(harness.query_by_label("Prompt").is_some());
+            if let Some(dir) = std::env::var_os("PHOTOCRAFT_AI_RAIL_OUT") {
+                harness.render().unwrap().save(std::path::PathBuf::from(dir).join(format!("ai-expanded-{}-{width}.png", theme.id()))).unwrap();
+            }
+            harness.get_by_label("Hide AI Studio").click();
+            harness.run_steps(4);
+            assert!(!harness.state().ui.ai.visible, "the rail also collapses the composer");
+        }
+    }
+}
+
+#[test]
 fn long_chinese_results_prompt_and_references_keep_composer_controls_inside_the_viewport() {
     let _language = crate::i18n::language_scope(crate::i18n::Lang::EN);
     for (width, height) in [(360.0, 480.0), (800.0, 480.0), (1280.0, 720.0)] {

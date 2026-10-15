@@ -157,6 +157,7 @@ fn workspace_name(id: &str) -> Option<&'static str> {
 
 /// Run a command id from any source (menu, shortcut, palette, automation).
 pub fn invoke(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, params: Value) -> Result<Value, String> {
+    if photocraft_engine::peer_binding::state().frozen { return Err("Wait for the application binding switch to finish".into()); }
     if app.automation_input
         && let Some(authorize) = app.services.automation_command.as_ref()
     {

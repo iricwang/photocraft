@@ -523,6 +523,9 @@ fn main() -> eframe::Result {
                     log::warn!("couldn't remember GPU backend {}: {e}", b.name());
                 }
             });
+            if let Err(error) = photocraft_engine::peer_binding::native::start() {
+                log::warn!("Defold IP binding service: {error}");
+            }
             if let Some((port, token, _)) = control {
                 let rx = control_server::start(port, token, cc.egui_ctx.clone());
                 app = app.with_control(rx);

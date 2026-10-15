@@ -8,6 +8,10 @@ pub(crate) fn show(app: &mut PhotocraftApp, host: &mut egui::Ui) {
     sync_history(app);
     crate::ai_project::sync_prompt(app);
     crate::ai_references::sync(app);
+    if !app.ui.ai.visible {
+        crate::ai_project::remember_prompt(app);
+        return;
+    }
     let ctx = host.ctx().clone();
     let content = ctx.content_rect();
     let canvas = app.last_canvas_rect.intersect(content);
@@ -24,12 +28,6 @@ pub(crate) fn show(app: &mut PhotocraftApp, host: &mut egui::Ui) {
             // Reset the remembered Area height so a longer draft can grow its viewport.
             ui.set_max_height((canvas.height() - 36.0).max(120.0));
             egui::Frame::popup(ui.style()).fill(tokens.dock).corner_radius(tokens.radius as u8).inner_margin(10.0).show(ui, |ui| {
-                if !app.ui.ai.visible {
-                    if icons::button(ui, "sparkles", 28.0, app.ui.ai.enabled, "Show AI Studio").clicked() {
-                        app.ui.ai.visible = true;
-                    }
-                    return;
-                }
                 ui.set_width((width - 20.0).max(120.0));
                 ui.spacing_mut().item_spacing.y = 8.0;
                 composer_header(app, ui);
@@ -40,6 +38,14 @@ pub(crate) fn show(app: &mut PhotocraftApp, host: &mut egui::Ui) {
             });
         });
     crate::ai_project::remember_prompt(app);
+}
+
+/// The composer always restores from the window-control rail, independently of AI power.
+pub(crate) fn rail_toggle(app: &mut PhotocraftApp, ui: &mut egui::Ui, size: f32) {
+    let label = if app.ui.ai.visible { "Hide AI Studio" } else { "Show AI Studio" };
+    if icons::rail_button(ui, "ai-studio", size, app.ui.ai.visible, tl!(label)).clicked() {
+        app.ui.ai.visible = !app.ui.ai.visible;
+    }
 }
 
 fn composer_header(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
@@ -79,7 +85,7 @@ fn composer_header(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 
 fn ai_switch(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     let t = theme::Tokens::get(ui.ctx());
-    ui.label("AI");
+    ui.add(icons::image("ai-studio", 20.0, t.icon));
     let (rect, mut response) = ui.allocate_exact_size(egui::vec2(36.0, 28.0), egui::Sense::click());
     if response.clicked() {
         app.ui.ai.enabled = !app.ui.ai.enabled;
@@ -720,6 +726,7 @@ mod tests {
                     ready = true;
                     return;
                 }
+                ui.horizontal(|ui| super::rail_toggle(app, ui, 28.0));
                 show(app, ui);
             },
             app,

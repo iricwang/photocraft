@@ -69,6 +69,7 @@ impl PhotocraftApp {
     /// `path` for File › Save unless it is a derivative preview, and `path` goes to the top of Open Recent. Returns the import
     /// warnings (also shown to the user).
     pub fn open_file(&mut self, path: &str, bytes: &[u8]) -> Result<Vec<String>, String> {
+        if photocraft_engine::peer_binding::state().frozen { return Err("Wait for the application binding switch to finish".into()); }
         if std::path::Path::new(path).file_name().is_some_and(|n| n == "game.project") {
             let root = std::path::Path::new(path).parent().ok_or("Project folder missing")?.to_string_lossy();
             let project = self.run("defold.openProject", serde_json::json!({"path":root}))?;

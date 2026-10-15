@@ -1419,6 +1419,7 @@ fn build() -> Vec<CommandSpec> {
     v.extend(crate::actions_cmds::specs());
     v.extend(crate::defold_cmds::specs());
     v.extend(crate::defold_design::specs());
+    v.extend(crate::peer_binding::specs());
     v.extend(crate::ai_cmds::specs());
     v.extend(crate::ai_project_cmds::specs());
     v.extend(crate::ai_history_cmds::specs());

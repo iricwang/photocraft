@@ -25,6 +25,7 @@ photocraft-compose = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true, features = ["float_roundtrip"] }
 base64 = "0.22"
+sha2 = "0.10"
 getrandom = { version = "0.2", features = ["js"] }
 thiserror = { workspace = true }
 rayon = { workspace = true }

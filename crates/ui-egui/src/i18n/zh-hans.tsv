@@ -2793,6 +2793,7 @@ curves	Smooth	平滑
 	Hide model settings	收起模型设置
 	Show/Hide Model Settings	显示/隐藏模型设置
 	Collapse AI Studio	收起 AI 浮窗
+	Hide AI Studio	收起 AI 工具栏
 	Show AI Studio	展开 AI 浮窗
 	Enable AI	启用 AI
 	Enable AI to generate images	请开启 AI 后再生成图片
@@ -2952,3 +2953,20 @@ curves	Smooth	平滑
 	set name	组名称
 	{set} (modified)	{set}（已修改）
 	Random	随机
+	Defold binding	Defold 绑定
+	Not bound; trying the local Defold editor	尚未绑定；正在尝试连接本机 Defold
+	Defold IP address	Defold IP 地址
+	Bind Defold	绑定 Defold
+	Bound to	已绑定到
+	GUI resource path	GUI 资源路径
+	Open GUI in both editors	在两端打开 GUI
+	Refresh project resources	刷新工程资源
+	Waiting for confirmation or transferring project resources…	正在等待确认或传输工程资源…
+	Switch application binding?	切换应用绑定？
+	Requested peer:	请求绑定：
+	Current peer:	当前绑定：
+	All open files must be saved or closed before switching. Unsaved files will ask for confirmation.	切换前必须保存或关闭全部打开的文件。未保存的文件会逐一询问。
+	Continue and close files	继续并关闭文件
+	Defold bound; project resources are ready	已绑定 Defold；工程资源已就绪
+	Waiting for the other application to confirm	正在等待另一端确认绑定
+	Cancel binding request	取消绑定请求

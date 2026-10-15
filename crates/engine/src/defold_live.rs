@@ -87,6 +87,16 @@ fn quote(s: &str) -> String {
 #[cfg(not(target_arch = "wasm32"))]
 pub fn request(root: &str, request: &Value) -> Result<Snapshot> {
     use std::io::{Read, Write};
+    if let Some(peer) = crate::peer_binding::active_for(root)? {
+        let payload = serde_json::to_string(request).map_err(err)?;
+        let script = include_str!("defold_live.lua").replacen("REQUEST", &format!("json.decode({})", quote(&payload)), 1);
+        let body = crate::peer_binding::native::http(&peer.address, "/binding/eval", &peer.token, script.as_bytes(), "POST")?;
+        let body = String::from_utf8(body).map_err(err)?;
+        let data = body.lines().find_map(|l| l.strip_prefix("PHOTOCRAFT_JSON:")).ok_or_else(|| err("Editor did not acknowledge the operation"))?;
+        let snap: Snapshot = serde_json::from_str(data).map_err(err)?;
+        if snap.nodes.len() > 8192 { return Err(err("GUI node limit")); }
+        return Ok(snap);
+    }
     let port_path = resource(root, "/.internal/editor.port")?;
     let port: u16 = std::fs::read_to_string(port_path).map_err(err)?.trim().parse().map_err(err)?;
     let token_path = resource(root, "/.internal/editor.token")?;
@@ -135,6 +145,9 @@ pub fn preview(root: &str, path: &str, width: u32, height: u32) -> Result<Vec<u8
     use std::io::{Read, Write};
     if width == 0 || height == 0 || width > 4096 || height > 4096 {
         return Err(err("Defold preview supports dimensions up to 4096"));
+    }
+    if let Some(peer) = crate::peer_binding::active_for(root)? {
+        return crate::peer_binding::native::http(&peer.address, "/binding/preview", &peer.token, &serde_json::to_vec(&json!({"path":path,"width":width,"height":height})).map_err(err)?, "POST");
     }
     let port: u16 = std::fs::read_to_string(resource(root, "/.internal/editor.port")?).map_err(err)?.trim().parse().map_err(err)?;
     let path: String = path

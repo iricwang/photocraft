@@ -41,6 +41,7 @@ pub mod cutout_cmds;
 pub mod defold_cmds;
 pub mod defold_design;
 pub mod defold_live;
+pub mod peer_binding;
 pub mod display_color;
 pub mod distort_cmds;
 pub mod document_preset_cmds;
