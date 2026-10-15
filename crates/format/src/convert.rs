@@ -140,7 +140,7 @@ fn layer_m(l: &Layer, sink: &mut dyn Sink) -> LayerM {
             psd_raw: opt_blob(&t.psd_raw, sink),
             runs: t.runs.clone(),
             paragraphs: t.paragraphs.clone(),
-            shape: t.shape,
+            shape: t.shape.clone(),
             orientation: t.orientation,
             antialias: t.antialias,
             warp: t.warp.clone(),
@@ -230,6 +230,7 @@ pub(crate) fn doc_m(d: &Document, sink: &mut dyn Sink) -> DocM {
         layers: d.layers.iter().map(|l| layer_m(l, sink)).collect(),
         channels: d.channels.iter().map(|c| channel_m(c, sink)).collect(),
         guides: d.guides.clone(),
+        ruler_origin: d.ruler_origin,
         selection: d.selection.as_ref().map(|s| surface_m(s, sink)),
         metadata: MetadataM {
             xmp: d.metadata.xmp.clone(),
@@ -277,6 +278,7 @@ pub(crate) fn doc_m(d: &Document, sink: &mut dyn Sink) -> DocM {
         duotone: d.duotone.clone(),
         variables: d.variables.clone(),
         timeline: d.timeline.clone(),
+        file_encoding: d.file_encoding,
         layer_comps: d.layer_comps.iter().map(|c| comp_m(c, sink)).collect(),
         last_applied_comp: d.last_applied_comp,
         last_document_state: d.last_document_state.as_ref().map(|c| comp_m(c, sink)),
@@ -482,7 +484,7 @@ impl Loader<'_> {
                     psd_raw: self.opt_blob(psd_raw)?,
                     runs: runs.clone(),
                     paragraphs: paragraphs.clone(),
-                    shape: *shape,
+                    shape: shape.clone(),
                     orientation: *orientation,
                     antialias: *antialias,
                     warp: warp.clone(),
@@ -615,6 +617,15 @@ impl Loader<'_> {
         }
         let mut patterns = Vec::with_capacity(m.patterns.len());
         for p in &m.patterns {
+            // Sizes come from the file: a pattern with no tiles can claim any size, and renderers
+            // allocate per pixel.
+            let max = photocraft_doc::pattern::MAX_EDGE;
+            if p.width == 0 || p.height == 0 {
+                return Err(FormatError::corrupt(format!("pattern `{}` is {}×{} px", p.name, p.width, p.height)));
+            }
+            if p.width > max || p.height > max {
+                return Err(FormatError::LimitExceeded(format!("pattern `{}` is {}×{} px (max {max} per side)", p.name, p.width, p.height)));
+            }
             patterns.push(Pattern { id: p.id.clone(), name: p.name.clone(), width: p.width, height: p.height, surface: self.surface(&p.surface)? });
         }
         let layer_comps = m.layer_comps.iter().map(|c| self.comp(c)).collect::<Result<Vec<_>>>()?;
@@ -628,6 +639,15 @@ impl Loader<'_> {
                 if sl.layer.is_none() && sl.origin == photocraft_doc::SliceOrigin::Layer {
                     sl.origin = photocraft_doc::SliceOrigin::User;
                 }
+            }
+        }
+        // Variable targets follow their layers through id remapping; a dangling one keeps a
+        // non-colliding placeholder so it stays a missing-layer skip rather than driving an
+        // unrelated layer (#4969). With preserved ids the map is the identity and defs stay as saved.
+        let mut variables = m.variables.clone();
+        if !self.preserve_ids {
+            for vd in &mut variables.defs {
+                vd.layer = self.id_map.get(&vd.layer.0).copied().unwrap_or(LayerId(u64::MAX - vd.layer.0.min(u64::MAX / 2)));
             }
         }
         let id = if self.preserve_ids { DocId(m.id) } else { DocId::fresh() };
@@ -703,6 +723,7 @@ impl Loader<'_> {
             layers,
             channels,
             guides: m.guides.clone(),
+            ruler_origin: m.ruler_origin,
             selection: self.opt_surface(&m.selection)?,
             metadata: md,
             ai_generations,
@@ -718,8 +739,9 @@ impl Loader<'_> {
             patterns,
             color_table: m.color_table.clone(),
             duotone: m.duotone.clone(),
-            variables: m.variables.clone(),
+            variables,
             timeline: m.timeline.clone(),
+            file_encoding: m.file_encoding,
             layer_comps,
             last_applied_comp: m.last_applied_comp,
             last_document_state,
