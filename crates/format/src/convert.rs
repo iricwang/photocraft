@@ -712,6 +712,30 @@ impl Loader<'_> {
         if !ai_project.is_valid() {
             return Err(FormatError::corrupt("invalid AI project memory"));
         }
+        let mut defold = m.defold.clone();
+        if let Some(design) = &mut defold {
+            if let Some(project) = &design.project
+                && project.schema_version != 1
+            {
+                return Err(FormatError::corrupt("unsupported Defold project attachment version"));
+            }
+            if !self.preserve_ids {
+                // Creative identity is persistent; only the local layer lookup keys follow
+                // native ID remapping. Keep dangling legacy links dangling for reconciliation.
+                for node in &mut design.nodes {
+                    node.layer = self.id_map.get(&node.layer).copied().unwrap_or_else(|| self.id(node.layer)).0;
+                    node.artwork = self.id_map.get(&node.artwork).copied().unwrap_or_else(|| self.id(node.artwork)).0;
+                }
+                if let Some(project) = &mut design.project {
+                    let mut mapped = std::collections::BTreeMap::new();
+                    for (old, binding) in std::mem::take(&mut project.layers) {
+                        let loaded = self.id_map.get(&old).copied().unwrap_or_else(|| self.id(old));
+                        mapped.insert(loaded.0, binding);
+                    }
+                    project.layers = mapped;
+                }
+            }
+        }
         Ok(Document {
             id,
             name: m.name.clone(),
@@ -729,7 +753,7 @@ impl Loader<'_> {
             ai_generations,
             ai_project,
             design_source_id: m.design_source_id.clone(),
-            defold: m.defold.clone(),
+            defold,
             global_light: m.global_light,
             paths,
             work_path: m.work_path.clone(),

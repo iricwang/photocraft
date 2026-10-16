@@ -33,6 +33,7 @@ pub struct GuiWorkspace {
     pub active: Option<u64>,
     next_id: u64,
     source_stamps: std::collections::HashMap<String, String>,
+    #[cfg(test)]
     pub(crate) design_stamps: std::collections::HashMap<String, (String, Option<String>)>,
 }
 pub struct GuiDocument {
@@ -428,16 +429,21 @@ fn resolve(d: &GuiDocument, node: &str) -> Result<(PathBuf, Vec<(String, String)
     if !p.text(&p.fields, "rename_patterns").is_empty() {
         return Err(err("Atlas rename patterns require manual binding"));
     }
-    if p.fields.iter().any(|f| f.name == "animations" && p.text(&f.children, "id") == image) {
-        return Err(err("Animated atlas entries are not publishable in P2"));
-    }
-    let images: Vec<_> = p
+    let mut images: Vec<_> = p
         .fields
         .iter()
         .filter(|f| f.name == "images")
         .map(|f| p.text(&f.children, "image"))
         .filter(|s| Path::new(s).file_stem().and_then(|s| s.to_str()) == Some(image))
         .collect();
+    for animation in p.fields.iter().filter(|f| f.name == "animations" && p.text(&f.children, "id") == image) {
+        let frames: Vec<_> = animation.children.iter().filter(|f| f.name == "images").collect();
+        if frames.len() != 1 {
+            return Err(err("Multi-frame atlas animations require the Defold animation resolver"));
+        }
+        let frame = frames.first().ok_or_else(|| err("Animation has no image"))?;
+        images.push(p.text(&frame.children, "image"));
+    }
     if images.len() != 1 {
         return Err(err("Atlas image is missing or ambiguous"));
     }

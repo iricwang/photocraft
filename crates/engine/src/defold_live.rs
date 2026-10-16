@@ -24,8 +24,9 @@ pub struct Snapshot {
     pub nodes: Vec<RemoteNode>,
 }
 
-/// Accept only machine-rounding noise in snapshots saved by older JSON parsers.
-/// Actual editor changes (including adjacent protobuf float values) still conflict.
+/// Accept JSON roundoff and the exact protobuf-float value of the prior snapshot
+/// after Defold saves and reloads it. This is directional: rounding both sides
+/// would hide real editor changes within a float cell.
 pub fn same_nodes(a: &[RemoteNode], b: &[RemoteNode]) -> bool {
     fn value_eq(a: &Value, b: &Value, depth: usize) -> bool {
         if depth > 128 {
@@ -33,7 +34,13 @@ pub fn same_nodes(a: &[RemoteNode], b: &[RemoteNode]) -> bool {
         }
         match (a, b) {
             (Value::Number(a), Value::Number(b)) => match (a.as_f64(), b.as_f64()) {
-                (Some(a), Some(b)) => a == b || (a.is_finite() && b.is_finite() && (a - b).abs() <= 4.0 * f64::EPSILON * a.abs().max(b.abs()).max(1.0)),
+                (Some(current), Some(expected)) => {
+                    current == expected
+                        || (current.is_finite()
+                            && expected.is_finite()
+                            && ((current - expected).abs() <= 4.0 * f64::EPSILON * current.abs().max(expected.abs()).max(1.0)
+                                || (b.is_f64() && (expected as f32).is_finite() && current == f64::from(expected as f32))))
+                }
                 _ => a == b,
             },
             (Value::Array(a), Value::Array(b)) => a.len() == b.len() && a.iter().zip(b).all(|(a, b)| value_eq(a, b, depth + 1)),
@@ -94,7 +101,9 @@ pub fn request(root: &str, request: &Value) -> Result<Snapshot> {
         let body = String::from_utf8(body).map_err(err)?;
         let data = body.lines().find_map(|l| l.strip_prefix("PHOTOCRAFT_JSON:")).ok_or_else(|| err("Editor did not acknowledge the operation"))?;
         let snap: Snapshot = serde_json::from_str(data).map_err(err)?;
-        if snap.nodes.len() > 8192 { return Err(err("GUI node limit")); }
+        if snap.nodes.len() > 8192 {
+            return Err(err("GUI node limit"));
+        }
         return Ok(snap);
     }
     let port_path = resource(root, "/.internal/editor.port")?;
@@ -147,7 +156,13 @@ pub fn preview(root: &str, path: &str, width: u32, height: u32) -> Result<Vec<u8
         return Err(err("Defold preview supports dimensions up to 4096"));
     }
     if let Some(peer) = crate::peer_binding::active_for(root)? {
-        return crate::peer_binding::native::http(&peer.address, "/binding/preview", &peer.token, &serde_json::to_vec(&json!({"path":path,"width":width,"height":height})).map_err(err)?, "POST");
+        return crate::peer_binding::native::http(
+            &peer.address,
+            "/binding/preview",
+            &peer.token,
+            &serde_json::to_vec(&json!({"path":path,"width":width,"height":height})).map_err(err)?,
+            "POST",
+        );
     }
     let port: u16 = std::fs::read_to_string(resource(root, "/.internal/editor.port")?).map_err(err)?.trim().parse().map_err(err)?;
     let path: String = path
@@ -403,6 +418,33 @@ pub fn accept(d: &mut GuiDocument, snapshot: Snapshot) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn saved_float_positions_reconnect_without_accepting_real_editor_changes() {
+        let make = |value| super::RemoteNode {
+            id: "node".into(),
+            parent: "root".into(),
+            properties: std::collections::BTreeMap::from([("position".into(), serde_json::json!([value, 0, 0]))]),
+            writable: vec!["position".into()],
+        };
+        for value in [593.3821531455611_f64, 1086.916680490431, -593.3821531455611] {
+            let rounded = f64::from(value as f32);
+            let expected = vec![make(value)];
+            let reloaded = vec![make(rounded)];
+            assert!(super::same_nodes(&reloaded, &expected));
+            assert!(!super::same_nodes(&expected, &reloaded));
+            let adjacent = f64::from(f32::from_bits((value as f32).to_bits() + 1));
+            assert!(!super::same_nodes(&[make(adjacent)], &expected));
+            assert!(!super::same_nodes(&[make(rounded + 0.0000001)], &expected));
+            let mut renamed = reloaded.clone();
+            renamed[0].id = "other".into();
+            assert!(!super::same_nodes(&renamed, &expected));
+        }
+        let mut expected = make(0.0);
+        expected.properties.insert("integer".into(), serde_json::json!(16_777_217));
+        let mut changed = expected.clone();
+        changed.properties.insert("integer".into(), serde_json::json!(16_777_216));
+        assert!(!super::same_nodes(&[changed], &[expected]));
+    }
     #[test]
     fn legacy_snapshot_rounding_is_accepted_but_editor_changes_are_not() {
         let make = |v| super::RemoteNode {

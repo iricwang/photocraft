@@ -391,7 +391,7 @@ fn paste(s: &mut Session, p: &Value, in_place: bool) -> Result<Value> {
     let target = PixelFormat::new(fmt.mode, fmt.sample, true);
     let surf = if moved.format() == target { moved } else { moved.convert(target) };
     let before = d.doc.clone();
-    let id = s.edit("Paste", |doc, active| {
+    let id = s.edit_structure("Paste", |doc, active| {
         let mut l = Layer::raster(doc.next_layer_name("Layer"), target);
         *crate::pixels_mut(&mut l)? = surf;
         let id = doc.insert_above(*active, l);
@@ -434,7 +434,7 @@ fn paste_layers(s: &mut Session, layers: &Document, dx: i32, dy: i32) -> Result<
             linked.push((*signature, *key, missing));
         }
     }
-    let id = s.edit("Paste", |doc, active| {
+    let id = s.edit_structure("Paste", |doc, active| {
         doc.patterns.extend(patterns);
         doc.metadata.psd_global_blocks.extend(linked);
         for l in copies.layers {
@@ -526,7 +526,7 @@ fn layer_via(s: &mut Session, cut: bool) -> Result<Value> {
     }
     if !has_sel && !cut {
         // No selection: Layer via Copy duplicates the whole layer (Photoshop).
-        let nid = s.edit("Layer Via Copy", |doc, active| {
+        let nid = s.edit_structure("Layer Via Copy", |doc, active| {
             let src = doc.layer(id).ok_or(EngineError::NoLayer(id))?;
             let mut dup = src.duplicate();
             dup.name = doc.copy_name(&src.name);
@@ -544,7 +544,7 @@ fn layer_via(s: &mut Session, cut: bool) -> Result<Value> {
     }
     let bg = s.tools.background;
     let label = if cut { "Layer Via Cut" } else { "Layer Via Copy" };
-    let nid = s.edit(label, |doc, active| {
+    let nid = s.edit_structure(label, |doc, active| {
         if cut {
             clear_selected(doc, id, bg)?;
         }
@@ -560,7 +560,7 @@ fn layer_via(s: &mut Session, cut: bool) -> Result<Value> {
 }
 
 fn merge_visible(s: &mut Session) -> Result<Value> {
-    s.edit("Merge Visible", |doc, active| {
+    s.edit_structure("Merge Visible", |doc, active| {
         let visible: Vec<usize> = doc.layers.iter().enumerate().filter(|(_, l)| l.visible).map(|(i, _)| i).collect();
         if visible.len() < 2 && !visible.iter().any(|i| doc.layers[*i].is_group()) {
             return Err(EngineError::Other("there are not enough visible layers to merge".into()));

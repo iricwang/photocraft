@@ -70,6 +70,7 @@ pub const TABLE: &[(&str, Class)] = &[
     ("photocraft", Class::Exempt),
     ("cli", Class::Exempt),
     ("web", Class::Exempt),
+    ("project-bridge", Class::Exempt),
     ("xtask", Class::Exempt),
 ];
 

@@ -332,6 +332,87 @@ fn closing_the_document_cancels_its_job() {
 }
 
 #[test]
+fn close_all_and_close_others_do_not_spin_or_drop_an_external_save_acknowledgement() {
+    let mut s = session(8, 8);
+    let gate = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let worker = gate.clone();
+    let id = job(s
+        .start_job(
+            "defold.saveDesignSource",
+            json!({}),
+            "Gated project save",
+            true,
+            move |_| {
+                for _ in 0..500 {
+                    if worker.load(std::sync::atomic::Ordering::Acquire) {
+                        return Ok(());
+                    }
+                    std::thread::sleep(std::time::Duration::from_millis(10));
+                }
+                Err(crate::EngineError::Other("save test gate timed out".into()))
+            },
+            |_, ()| Ok(json!({"saved":true})),
+        )
+        .unwrap());
+    s.execute("file.new", json!({"width":8,"height":8})).unwrap();
+    assert!(!s.cancel_job(id), "a possibly committed external save must retain its acknowledgement");
+    assert!(s.execute("file.closeAll", json!({})).is_err());
+    assert!(s.execute("file.closeOthers", json!({})).is_err());
+    assert!(s.execute("file.close", json!({"document":0})).is_err());
+    assert_eq!(s.documents().len(), 2, "preflight must preserve all documents");
+    gate.store(true, std::sync::atomic::Ordering::Release);
+    assert_eq!(s.wait_job(id).unwrap()["saved"], true);
+    s.execute("file.closeAll", json!({})).unwrap();
+    assert!(s.documents().is_empty());
+}
+
+#[test]
+fn a_captured_project_save_keeps_new_paint_and_receives_its_acknowledgement() {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    let mut s = session(32, 32);
+    let revision = s.active().unwrap().revision;
+    let captured = s.active().unwrap().doc.clone();
+    let gate = Arc::new(AtomicBool::new(false));
+    let worker_gate = gate.clone();
+    s.jobs.spawn = true;
+    run_captured(
+        &mut s,
+        "Gated captured save",
+        move |_| {
+            for _ in 0..500 {
+                if worker_gate.load(Ordering::Acquire) {
+                    return Ok(captured);
+                }
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            Err(EngineError::Other("Captured save gate timed out".into()))
+        },
+        move |session, captured| {
+            assert_ne!(session.active().unwrap().doc.as_ref(), captured.as_ref(), "newer creative content must remain live");
+            session.active_mut().unwrap().saved_revision = revision;
+            Ok(json!({"saved":true,"capturedNativeRevision":revision}))
+        },
+    )
+    .unwrap();
+    s.jobs.spawn = false;
+    let mut pending = s.jobs.pending.take().unwrap();
+    pending.command = "defold.saveDesignSource".into();
+    let id = pending.id;
+    s.jobs.running.push(pending);
+    assert!(s.active_job().is_none(), "uploading a frozen source must not lock painting");
+    assert!(crate::defold_project_client::project_task_running(&s));
+    assert!(!s.cancel_job(id));
+    assert!(s.close(0).is_none(), "the source acknowledgement must survive until it is applied");
+    s.execute("paint.stroke", json!({"points":[[8,8]],"size":6,"color":"#ff0000"})).unwrap();
+    let painted = s.active().unwrap().doc.clone();
+    gate.store(true, Ordering::Release);
+    assert_eq!(s.wait_job(id).unwrap()["saved"], true);
+    assert_eq!(s.active().unwrap().doc, painted);
+    assert!(s.active().unwrap().is_dirty(), "only the older captured revision was saved");
+    assert!(!crate::defold_project_client::project_task_running(&s));
+}
+
+#[test]
 fn jobs_cancel_command_and_bad_params() {
     let mut s = session(1600, 1200);
     let id = job(s.start("filter.blur.gaussianBlur", json!({"radius": 80})).unwrap());

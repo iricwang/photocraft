@@ -242,6 +242,28 @@ fn file_error(operation: &str, path: &str, error: std::io::Error) -> AutomationE
 /// directory capabilities. Automation must use `doc.open`, `doc.save` and
 /// `doc.render` for file effects until those commands are migrated.
 pub fn authorize_engine_command(id: &str, params: &Value) -> Result<(), AutomationError> {
+    // Legacy GUI edits can write recovery files or mutate a live editor, even
+    // without an explicit path. The native GUI opener also initializes the
+    // project store. Document read/write roots do not grant project authority.
+    // Keep only verified in-memory operations available until the protocol has
+    // an explicit project capability; future Defold commands fail closed too.
+    let native_gui_properties = id == "defold.setDesignProperties"
+        && params.get("values").and_then(Value::as_object).is_some_and(|values| !values.contains_key("font") && !values.contains_key("texture"));
+    if id.starts_with("defold.")
+        && !native_gui_properties
+        && !matches!(
+            id,
+            "defold.activateGui"
+                | "defold.selectNode"
+                | "defold.addDesignNode"
+                | "defold.bindingStatus"
+                | "defold.projectStatus"
+                | "defold.projectConnectionStatus"
+                | "defold.assetManagementStatus"
+        )
+    {
+        return Err(command_error(id));
+    }
     let safe_file_command = matches!(
         id,
         "file.new"
@@ -692,6 +714,13 @@ mod tests {
             "measurementLog.export",
             "layer.videoLayers.reloadFrame",
             "edit.colorSettings",
+            "defold.saveDesignSource",
+            "defold.publishProjectDesign",
+            "defold.connectProjectHost",
+            "defold.openProjectGui",
+            "defold.syncDesign",
+            "defold.refreshPublication",
+            "defold.cancelPublication",
         ] {
             assert!(authorize_engine_command(id, &serde_json::json!({})).is_err());
         }
@@ -726,6 +755,60 @@ mod tests {
         assert!(session.execute("file.automate.conditionalModeChange", params).is_err());
         assert_eq!(session.active().unwrap().doc.mode, photocraft_engine::doc::ColorMode::Rgb);
         assert!(authorize_desktop_engine_step("file.saveACopy", &serde_json::json!({})).is_err());
+    }
+
+    #[test]
+    fn document_roots_never_grant_ambient_defold_project_authority() {
+        let (inside, _, _) = roots("defold-project-authority");
+        let gui = inside.join("main.gui");
+        std::fs::write(inside.join("game.project"), b"[display]\nwidth=96\nheight=96\n").unwrap();
+        let original = b"nodes { id: \"root\" type: TYPE_BOX }\n";
+        std::fs::write(&gui, original).unwrap();
+        let cached = [
+            "defold.activateGui",
+            "defold.selectNode",
+            "defold.addDesignNode",
+            "defold.bindingStatus",
+            "defold.projectStatus",
+            "defold.projectConnectionStatus",
+        ];
+        let denied: Vec<_> = photocraft_engine::command_specs()
+            .iter()
+            .filter(|spec| spec.id.starts_with("defold.") && !cached.contains(&spec.id) && spec.id != "defold.setDesignProperties")
+            .map(|spec| spec.id)
+            .collect();
+        assert!(denied.contains(&"defold.openDesign"));
+        assert!(denied.contains(&"defold.setNodeProperty"));
+        assert!(denied.contains(&"defold.saveDesignSource"));
+        for (read, write) in [(false, false), (true, false), (false, true), (true, true)] {
+            let workspace = AuthorizedWorkspace::new(read.then_some(inside.as_path()), write.then_some(inside.as_path())).unwrap();
+            let mut headless = crate::Headless::with_workspace(workspace);
+            headless.command_run("file.new", serde_json::json!({"width":4,"height":4})).unwrap();
+            headless.command_run("layer.new.layer", serde_json::json!({"name":"Ordinary artwork"})).unwrap();
+            for id in &denied {
+                let error = headless.command_run(id, serde_json::json!({"path":gui,"allModifiedResources":true})).unwrap_err();
+                assert!(error.to_string().contains("ambient filesystem paths"), "{id}, read={read}, write={write}: {error}");
+            }
+            for property in ["texture", "font"] {
+                let error = headless.command_run("defold.setDesignProperties", serde_json::json!({"values":{property:"project-resource"}})).unwrap_err();
+                assert!(error.to_string().contains("ambient filesystem paths"), "{property}: {error}");
+            }
+            assert_eq!(std::fs::read(&gui).unwrap(), original);
+            assert!(!inside.join(".photocraft").exists());
+            assert!(!inside.join(".internal").exists());
+            assert!(!inside.join("main.gui.pcraft").exists());
+        }
+        for id in cached {
+            assert!(authorize_engine_command(id, &serde_json::json!({})).is_ok(), "{id}");
+        }
+        assert!(
+            authorize_engine_command(
+                "defold.setDesignProperties",
+                &serde_json::json!({"values":{"position.x":10,"rotation.z":45,"text":"Edited","alpha":0.5}})
+            )
+            .is_ok()
+        );
+        assert!(authorize_engine_command("defold.futureProjectMutation", &serde_json::json!({})).is_err());
     }
 
     #[test]

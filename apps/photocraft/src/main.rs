@@ -446,6 +446,9 @@ fn main() -> eframe::Result {
                 }
             }
             let mut app = PhotocraftApp::new(Session::new(), services);
+            // Command-line opens can post notices before the first UI pass. Queue
+            // named fonts in the creator so those notices can render immediately.
+            PhotocraftApp::setup_context(&cc.egui_ctx, app.ui.theme);
             app.integrated_titlebar = cfg!(target_os = "macos");
             app.custom_titlebar = custom_titlebar;
             // Only the title bar's free gap drags the window, never the menus (mac_window.rs).

@@ -400,32 +400,43 @@ pub(crate) fn flattened(doc: &Document, fmt: PixelFormat) -> Surface {
 // ---------- close / revert / save a copy / open as ----------
 
 fn close_all(s: &mut Session) -> Result<Value> {
+    for index in 0..s.documents().len() {
+        s.ensure_closeable(index)?;
+    }
     crate::defold_cmds::close_set(s, false)?;
     let n = s.documents().len();
     while !s.documents().is_empty() {
-        s.close(s.documents().len() - 1);
+        s.close(s.documents().len() - 1).ok_or_else(|| EngineError::Other("A document is still saving; no further documents were closed".into()))?;
     }
     Ok(json!({"closed": n}))
 }
 
 fn close_others(s: &mut Session, p: &Value) -> Result<Value> {
     if s.active_gui().is_some() && p.get("document").is_none() {
+        for index in 0..s.documents().len() {
+            s.ensure_closeable(index)?;
+        }
         crate::defold_cmds::close_set(s, true)?;
         let n = s.documents().len();
         while !s.documents().is_empty() {
-            s.close(s.documents().len() - 1);
+            s.close(s.documents().len() - 1).ok_or_else(|| EngineError::Other("A document is still saving; no further documents were closed".into()))?;
         }
         return Ok(json!({"closed":n}));
     }
-    crate::defold_cmds::close_set(s, false)?;
     let keep = p.get("document").and_then(Value::as_u64).map(|v| v as usize).or(s.active_index()).ok_or(EngineError::NoDocument)?;
     if keep >= s.documents().len() {
         return Err(EngineError::BadParams { cmd: "file.closeOthers".into(), msg: format!("no document {keep}") });
     }
+    for index in 0..s.documents().len() {
+        if index != keep {
+            s.ensure_closeable(index)?;
+        }
+    }
+    crate::defold_cmds::close_set(s, false)?;
     let n = s.documents().len() - 1;
     for i in (0..s.documents().len()).rev() {
         if i != keep {
-            s.close(i);
+            s.close(i).ok_or_else(|| EngineError::Other("A document is still saving; no further documents were closed".into()))?;
         }
     }
     s.set_active(0);

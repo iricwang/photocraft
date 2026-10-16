@@ -192,7 +192,9 @@ pub fn run(app: &mut PhotocraftApp, id: &str, params: Value) -> Result<Value, St
 /// Open a file in the background: a tab appears at once and shows the progress; the document
 /// replaces it when decoded. `path` is remembered for File › Save and Open Recent.
 pub fn start_open(app: &mut PhotocraftApp, name: &str, path: Option<String>, source: OpenSource) -> Result<(), String> {
-    if photocraft_engine::peer_binding::state().frozen { return Err("Wait for the application binding switch to finish".into()); }
+    if photocraft_engine::peer_binding::state().frozen {
+        return Err("Wait for the application binding switch to finish".into());
+    }
     let name = &app.open_name(name);
     match app.session.start_open(name, source).map_err(|e| e.to_string())? {
         // Inline (wasm): finish now, like a background open that ended at once.
@@ -357,6 +359,7 @@ fn close_after_saves(app: &mut PhotocraftApp, ctx: &egui::Context) {
 /// Per frame: apply finished jobs and react to them; keep frames coming while jobs run; Esc
 /// cancels the job in view.
 pub fn tick(app: &mut PhotocraftApp, ctx: &egui::Context) {
+    crate::defold_design_ui::track_jobs(app, ctx);
     for e in app.session.poll_jobs() {
         on_event(app, ctx, e);
     }
@@ -450,6 +453,28 @@ fn on_event(app: &mut PhotocraftApp, ctx: &egui::Context, e: JobEvent) {
             true
         }
     });
+    if crate::defold_design_ui::publication_event(app, ctx, &e) {
+        return;
+    }
+    if e.command == "defold.saveDesignSource" {
+        match e.outcome {
+            JobOutcome::Done(value) => {
+                app.sync_views();
+                app.ui.status = tl!("Creative source saved to project").into();
+                app.ui.status_error = false;
+                if let Some(document) = value.get("documentId").and_then(Value::as_u64) {
+                    crate::discard_ui::saved_document(app, ctx, DocId(document));
+                }
+            }
+            JobOutcome::Failed(error) => notices::error(app, error),
+            JobOutcome::Cancelled => {
+                app.ui.status = tl!("Creative source save cancelled").into();
+                app.ui.status_error = false;
+            }
+        }
+        close_after_saves(app, ctx);
+        return;
+    }
     // A Free Transform commit's session ends with its job (then reported like any job).
     crate::transform_tool::on_job_event(app, &e);
     if crate::prefs_ui::on_recovery_event(app, &e) {

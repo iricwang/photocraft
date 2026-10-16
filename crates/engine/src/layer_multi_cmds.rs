@@ -380,6 +380,7 @@ pub fn translate(s: &mut Session, p: &Value) -> Result<Value> {
         }
         let moves: Vec<_> = ids.iter().map(|&id| (id, dx, dy)).collect();
         move_layers(doc, &before, &moves)?;
+        crate::defold_shared_design::translated(doc, &ids, dx, dy)?;
         for id in alone {
             let locks = doc.effective_locks(id);
             let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
@@ -764,7 +765,9 @@ pub fn same_pixels(a: &Document, b: &Document) -> bool {
 pub fn step_damage(a: &Document, b: &Document) -> Option<Rect> {
     // GUI artwork extends outside the document; canvas-clipped history bounds are incomplete.
     // Brush commands override this with exact, unclipped dab damage.
-    if a.defold.is_some() || b.defold.is_some() { return None; }
+    if a.defold.is_some() || b.defold.is_some() {
+        return None;
+    }
     if !doc_pixels_equal(a, b) {
         return None;
     }
@@ -1120,12 +1123,19 @@ pub fn move_to(s: &mut Session, p: &Value) -> Result<Value> {
     }
 
     let original_active = st.active_layer;
+    let source_doc = copy.then(|| st.doc.clone());
     let background = crate::background_cmds::background_id(doc);
-    let (count, copies) = s.edit(if copy { "Duplicate Layer" } else { "Reorder Layers" }, |doc, active| {
+    let (count, copies) = s.edit_structure(if copy { "Duplicate Layer" } else { "Reorder Layers" }, |doc, active| {
         let before = if copy { Default::default() } else { crate::clip_group::Before::read(doc, &moved_ids) };
         let mut moved = Vec::with_capacity(moved_ids.len());
         for &id in &moved_ids {
-            moved.push(if copy { crate::commands::layer_copy(doc, id)? } else { doc.remove(id).ok_or(EngineError::NoLayer(id))? });
+            if let Some(source) = &source_doc {
+                let duplicated = crate::commands::layer_copy(doc, id)?;
+                crate::defold_design_reconcile::copy_roles(doc, source, source.layer(id).ok_or(EngineError::NoLayer(id))?, &duplicated)?;
+                moved.push(duplicated);
+            } else {
+                moved.push(doc.remove(id).ok_or(EngineError::NoLayer(id))?);
+            }
         }
         let copies: Vec<LayerId> = if copy { moved.iter().map(|l| l.id).collect() } else { Vec::new() };
         // Look up the destination AFTER removing every source: its indices may have shifted.
@@ -1239,7 +1249,7 @@ fn rename_layer(s: &mut Session, p: &Value) -> Result<Value> {
 
 fn reverse(s: &mut Session) -> Result<Value> {
     let sel = selected(s);
-    s.edit("Reverse", |doc, _| {
+    s.edit_structure("Reverse", |doc, _| {
         let background = crate::background_cmds::background_id(doc);
         let ids = top_level(doc, &sel);
         if ids.len() < 2 {
@@ -1278,7 +1288,7 @@ pub fn group_layers(s: &mut Session, p: &Value) -> Result<Value> {
         return Err(EngineError::Other("no layer selected".into()));
     }
     let name = p.get("name").and_then(Value::as_str).map(str::to_string);
-    let gid = s.edit("Group Layers", |doc, active| {
+    let gid = s.edit_structure("Group Layers", |doc, active| {
         let ids = top_level(doc, &ids);
         let top = *ids.last().ok_or(EngineError::NoLayer(LayerId(0)))?;
         let name = name.unwrap_or_else(|| doc.next_layer_name("Group"));
@@ -1307,7 +1317,7 @@ fn merge_layers(s: &mut Session) -> Result<Value> {
         }
         return s.execute("layer.mergeDown", json!({}));
     }
-    let mid = s.edit("Merge Layers", |doc, active| {
+    let mid = s.edit_structure("Merge Layers", |doc, active| {
         let ids = top_level(doc, &sel);
         let top_id = *ids.last().ok_or_else(|| EngineError::Other("Merge Layers needs two or more layers".into()))?;
         let top = doc.layer(top_id).ok_or(EngineError::NoLayer(top_id))?.clone();
@@ -1363,7 +1373,7 @@ pub(crate) fn deletion_neighbours(doc: &Document, target: LayerId) -> Vec<LayerI
 /// Delete Layer with several layers selected.
 pub fn delete_selected(s: &mut Session) -> Result<Value> {
     let sel = selected(s);
-    s.edit("Delete Layers", |doc, active| {
+    s.edit_structure("Delete Layers", |doc, active| {
         let ids = top_level(doc, &sel);
         let neighbours = active.map(|id| deletion_neighbours(doc, id)).unwrap_or_default();
         let before = crate::clip_group::Before::read(doc, &ids);
@@ -1388,13 +1398,14 @@ pub fn duplicate_selected(s: &mut Session, in_place: bool, label: &str) -> Resul
     let sel = selected(s);
     let before = s.active().ok_or(EngineError::NoDocument)?.doc.clone();
     let old_active = s.active().and_then(|d| d.active_layer);
-    let (copies, active) = s.edit(label, |doc, active| {
+    let (copies, active) = s.edit_structure(label, |doc, active| {
         let mut copies = Vec::new();
         let mut new_active = None;
         for id in top_level(doc, &sel) {
             // Match the single-layer duplicate path: Background copies become
             // ordinary layers, while normal copies retain their original locks.
             let dup = crate::commands::layer_copy(doc, id)?;
+            crate::defold_design_reconcile::copy_roles(doc, &before, before.layer(id).ok_or(EngineError::NoLayer(id))?, &dup)?;
             let nid = doc.insert_above(Some(id), dup);
             if !in_place {
                 crate::artboard_cmds::place_copy(doc, nid)?;

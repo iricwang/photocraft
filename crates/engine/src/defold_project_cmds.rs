@@ -1,0 +1,178 @@
+//! Project source commands share the native editor's existing job machinery.
+use crate::{commands::CommandSpec, defold_design};
+
+pub(crate) fn linked_idle(session: &crate::Session) -> std::result::Result<(), String> {
+    if !defold_design::linked(session) {
+        return Err("Open a linked Defold GUI first".into());
+    }
+    crate::file_cmds::native(session)?;
+    if session.active_job().is_some() || crate::defold_project_client::project_task_running(session) {
+        return Err("A document task is still running; wait for it to finish before starting another project operation".into());
+    }
+    Ok(())
+}
+
+pub fn specs() -> Vec<CommandSpec> {
+    vec![
+        CommandSpec {
+            id: "defold.reviewSharedPublication",
+            label: "Review related GUI publication",
+            menu: &[],
+            shortcut: None,
+            params: "{}",
+            enabled: linked_idle,
+            run: |s, _| crate::defold_project_publish_client::review_shared(s),
+            journal: false,
+        },
+        CommandSpec {
+            id: "defold.sharedPublicationReviewStatus",
+            label: "Shared publication review status",
+            menu: &[],
+            shortcut: None,
+            params: "{}",
+            enabled: |_| Ok(()),
+            run: |s, _| Ok(crate::defold_project_publish_client::shared_review_status(s)),
+            journal: false,
+        },
+        CommandSpec {
+            id: "defold.revealProjectResource",
+            label: "Reveal resource in Defold",
+            menu: &[],
+            shortcut: None,
+            params: "{path}",
+            enabled: linked_idle,
+            run: crate::defold_project_connection::reveal,
+            journal: false,
+        },
+        CommandSpec {
+            id: "defold.requestProjectEditing",
+            label: "Request project editing",
+            menu: &[],
+            shortcut: None,
+            params: "{}",
+            enabled: linked_idle,
+            run: |s, _| crate::defold_project_client::request_editing(s),
+            journal: false,
+        },
+        CommandSpec {
+            id: "defold.reviewProjectChanges",
+            label: "Review Defold changes",
+            menu: &[],
+            shortcut: None,
+            params: "{}",
+            enabled: linked_idle,
+            run: |s, _| crate::defold_project_conflict_client::review(s),
+            journal: false,
+        },
+        CommandSpec {
+            id: "defold.applyProjectReview",
+            label: "Apply reviewed Defold changes",
+            menu: &[],
+            shortcut: None,
+            params: "{reviewId,choices?:{index:mine|theirs}}",
+            enabled: linked_idle,
+            run: crate::defold_project_conflict_client::apply,
+            journal: false,
+        },
+        CommandSpec {
+            id: "defold.cancelPublication",
+            label: "Cancel prepared publication",
+            menu: &[],
+            shortcut: None,
+            params: "{}",
+            enabled: linked_idle,
+            run: |s, _| crate::defold_project_publish_client::cancel(s),
+            journal: false,
+        },
+        CommandSpec {
+            id: "defold.releaseProjectEditing",
+            label: "Release project editing",
+            menu: &[],
+            shortcut: None,
+            params: "{}",
+            enabled: linked_idle,
+            run: |s, _| crate::defold_project_client::release_editing(s),
+            journal: false,
+        },
+        CommandSpec {
+            id: "defold.refreshPublication",
+            label: "Refresh publication status",
+            menu: &[],
+            shortcut: None,
+            params: "{}",
+            enabled: linked_idle,
+            run: |s, _| crate::defold_project_publish_client::refresh(s),
+            journal: false,
+        },
+        CommandSpec {
+            id: "defold.connectProjectHost",
+            label: "Connect project host",
+            menu: &[],
+            shortcut: None,
+            params: "{pairingFile}",
+            enabled: crate::file_cmds::native,
+            run: crate::defold_project_connection::connect,
+            journal: false,
+        },
+        CommandSpec {
+            id: "defold.openProjectGui",
+            label: "Open project GUI",
+            menu: &[],
+            shortcut: None,
+            params: "{path}",
+            enabled: crate::file_cmds::native,
+            run: crate::defold_project_connection::open_gui,
+            journal: false,
+        },
+        CommandSpec {
+            id: "defold.projectConnectionStatus",
+            label: "Project connection status",
+            menu: &[],
+            shortcut: None,
+            params: "{}",
+            enabled: |_| Ok(()),
+            run: |s, _| Ok(crate::defold_project_client::connection_status(s)),
+            journal: false,
+        },
+        CommandSpec {
+            id: "defold.syncDesign",
+            label: "Sync design to Defold",
+            menu: &[],
+            shortcut: None,
+            params: "{sharedReviewId?}",
+            enabled: linked_idle,
+            run: crate::defold_project_publish_client::publish_with_params,
+            journal: false,
+        },
+        CommandSpec {
+            id: "defold.publishProjectDesign",
+            label: "Publish GUI to Defold",
+            menu: &[],
+            shortcut: None,
+            params: "{sharedReviewId?}",
+            enabled: linked_idle,
+            run: crate::defold_project_publish_client::publish_with_params,
+            journal: false,
+        },
+        CommandSpec {
+            id: "defold.saveDesignSource",
+            label: "Save GUI creative source",
+            menu: &[],
+            shortcut: None,
+            params: "{}",
+            enabled: linked_idle,
+            run: |s, _| crate::defold_project_client::save_source(s),
+            journal: false,
+        },
+        CommandSpec {
+            id: "defold.projectStatus",
+            label: "GUI project status",
+            menu: &[],
+            shortcut: None,
+            params: "{}",
+            enabled: |_| Ok(()),
+            run: |s, _| Ok(crate::defold_project_client::status(s)),
+            journal: false,
+        },
+    ]
+}

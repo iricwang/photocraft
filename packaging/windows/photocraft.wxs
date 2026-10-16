@@ -152,6 +152,7 @@
         <File Id="PhotocraftCliExe" Source="$(var.BinDir)\photocraft-cli.exe" KeyPath="yes" />
       </Component>
       <Component Id="PhotocraftCodexBridge">
+        <File Id="PhotocraftProjectBridgeExe" Source="$(var.BinDir)\photocraft-project-bridge.exe" />
         <File Id="PhotocraftCodexBridgeExe" Source="$(var.BinDir)\photocraft-codex-bridge.exe" KeyPath="yes" />
         <File Source="$(var.BinDir)\enable-codex-bridge.ps1" />
         <File Source="$(var.BinDir)\disable-codex-bridge.ps1" />

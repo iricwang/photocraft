@@ -343,6 +343,24 @@ pub fn run<T: Send + 'static>(
     Ok(json!({"job": id.0}))
 }
 
+/// A durable operation on a captured document revision. Keep its document
+/// association for close/cancel guards without locking painting or requiring
+/// the live Arc to remain identical. The callback must validate its opening
+/// and captured revision before replacing any creative content.
+pub fn run_captured<T: Send + 'static>(
+    s: &mut Session,
+    label: &str,
+    work: impl FnOnce(&JobCtx) -> Result<T> + Send + 'static,
+    apply: impl FnOnce(&mut Session, T) -> Result<Value> + Send + 'static,
+) -> Result<Value> {
+    let document = s.active().ok_or(EngineError::NoDocument)?.doc.id;
+    let result = run(s, label, false, work, apply)?;
+    if let Some(pending) = s.jobs.pending.as_mut() {
+        pending.doc = Some(document);
+    }
+    Ok(result)
+}
+
 /// A document edit whose body is the job: like [`Session::edit`] (one undo step named `label`),
 /// but `f` runs on a worker against a copy of the active document when started in the
 /// background. `finish` turns `f`'s output into the command's result.
@@ -560,9 +578,11 @@ impl Session {
     /// stays unchanged. The document is unlocked at once. False if no such job is running.
     pub fn cancel_job(&mut self, id: JobId) -> bool {
         let Some(i) = self.jobs.running.iter().position(|r| r.id == id) else { return false };
-        // A print worker can already have handed the job to the OS. Discarding its result
-        // would falsely report cancellation; removal belongs to the system print queue.
-        if matches!(self.jobs.running[i].command.as_str(), "file.print" | "file.printOneCopy") {
+        // External side effects can already be committed. Keep their acknowledgement
+        // attached instead of discarding it and leaving the client on a stale head.
+        if matches!(self.jobs.running[i].command.as_str(), "file.print" | "file.printOneCopy")
+            || crate::defold_project_client::is_project_commit(&self.jobs.running[i].command)
+        {
             return false;
         }
         let job = self.jobs.running.remove(i);
@@ -605,7 +625,7 @@ impl Session {
 
     /// The running job that locks document `doc`, if any.
     pub fn job_on(&self, doc: DocId) -> Option<JobInfo> {
-        self.jobs.running.iter().find(|r| r.doc == Some(doc)).map(Running::info)
+        self.jobs.running.iter().find(|r| r.doc == Some(doc) && r.snapshot.is_some()).map(Running::info)
     }
 
     /// The running job that locks the active document, if any.
@@ -787,7 +807,7 @@ impl Session {
         let Running { label, doc, snapshot, coalesce, color_restrict, command, params, journal, .. } = job;
         let prev_active = self.focus();
         let target = match doc {
-            Some(d) => {
+            Some(d) if snapshot.is_some() => {
                 let i =
                     self.documents().iter().position(|st| st.doc.id == *d).ok_or_else(|| EngineError::Other(format!("`{label}`: the document was closed")))?;
                 let unchanged = snapshot.as_ref().is_some_and(|w| self.documents().get(i).is_some_and(|st| Weak::ptr_eq(w, &Arc::downgrade(&st.doc))));
@@ -796,6 +816,14 @@ impl Session {
                 }
                 self.set_active(i);
                 Some(i)
+            }
+            Some(d) => {
+                if !self.documents().iter().any(|state| state.doc.id == *d) {
+                    return Err(EngineError::Other(format!("`{label}`: the document was closed")));
+                }
+                // Captured operations route their own acknowledgement by open_id.
+                // Do not focus another opening that happens to share this DocId.
+                None
             }
             None => None,
         };

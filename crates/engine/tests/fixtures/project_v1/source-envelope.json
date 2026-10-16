@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "packageId": "0000000a-1111-4111-8111-111111111111",
+  "sourceRevision": "source-1",
+  "parentSourceRevision": null,
+  "draftRevision": "draft-1",
+  "sceneBases": [
+    {
+      "sceneId": "00000014-1111-4111-8111-111111111111",
+      "path": "/ui/challenge.gui",
+      "guiSource": "nodes {}",
+      "diskHash": "sha256:d494ab4e928150b14b9ae450d3247dc3421b8e54ff54fd0fdb525aa1194fe43c",
+      "sceneHash": "sha256:d494ab4e928150b14b9ae450d3247dc3421b8e54ff54fd0fdb525aa1194fe43c",
+      "publishedRevision": null
+    }
+  ],
+  "identityMap": {
+    "42": "00000028-1111-4111-8111-111111111111"
+  },
+  "native": {
+    "hash": "sha256:9d51414fa3359192fabf2a77932d22096f4dd7d60dedee8f36b6af696ba663e9",
+    "length": 21
+  },
+  "dependencies": [],
+  "draft": {
+    "guiSources": {
+      "00000014-1111-4111-8111-111111111111": "nodes {}"
+    },
+    "sharedSources": []
+  }
+}

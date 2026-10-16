@@ -4246,3 +4246,116 @@ cameraRaw	Yellow	Sárga
 	Wait for the current operation to finish	Várja meg a jelenlegi művelet befejezését
 	X anchor	X-horgony
 	Y anchor	Y-horgony
+
+	Bind Defold	Bind Defold
+	Bound to	Bound to
+	Cancel binding request	Cancel binding request
+	Connect project	Connect project
+	Connect to another Defold project?	Connect to another Defold project?
+	Defold IP address	Defold IP address
+	Defold binding	Defold binding
+	Defold bound; project resources are ready	Defold bound; project resources are ready
+	GUI resource path	GUI resource path
+	Not bound; trying the local Defold editor	Not bound; trying the local Defold editor
+	Open GUI in both editors	Open GUI in both editors
+	Open documents and unsaved edits stay open. Only manual sync publishes changes to their own project.	Open documents and unsaved edits stay open. Only manual sync publishes changes to their own project.
+	Reconnecting to	Reconnecting to
+	Refresh project resources	Refresh project resources
+	Waiting for confirmation or transferring project resources…	Waiting for confirmation or transferring project resources…
+	Waiting for the other application to confirm	Waiting for the other application to confirm
+	Creative source save cancelled	Creative source save cancelled
+	Creative source saved to project	Creative source saved to project
+Published; Defold has newer unsaved changes	Published; Defold has newer unsaved changes
+GUI and artwork published to Defold	GUI and artwork published to Defold
+Publication stopped; creative source is preserved	Publication stopped; creative source is preserved
+Publication needs recovery; check its status before retrying	Publication needs recovery; check its status before retrying
+Publication is awaiting confirmation; check its status	Publication is awaiting confirmation; check its status
+No publication has been recorded for this GUI	No publication has been recorded for this GUI
+Publication was not confirmed	Publication was not confirmed
+Publication cancelled; check its status before retrying	Publication cancelled; check its status before retrying
+Publishing GUI and artwork...	Publishing GUI and artwork...
+Creative source	Creative source
+Source has unsaved edits	Source has unsaved edits
+Creative source has not been saved to project	Creative source has not been saved to project
+Save creative source	Save creative source
+Saving creative source...	Saving creative source...
+Saves the creative source, then publishes GUI and artwork	Saves the creative source, then publishes GUI and artwork
+New edits have not been published	New edits have not been published
+Publication details	Publication details
+Check publication status	Check publication status
+Project connection	Project connection
+Connect project host...	Connect project host...
+Choose a project pairing file on this computer	Choose a project pairing file on this computer
+Project host connected	Project host connected
+Open project GUI	Open project GUI
+Defold editor connection	Defold editor connection
+Release editing permission	Release editing permission
+Save the creative source before handing editing to another computer	Save the creative source before handing editing to another computer
+Cancel prepared publication	Cancel prepared publication
+Reviewed changes applied; save or sync when ready	Reviewed changes applied; save or sync when ready
+Review cancelled; the creative source is unchanged	Review cancelled; the creative source is unchanged
+Checking project changes...	Checking project changes...
+Review Defold changes	Review Defold changes
+Compare both editors before accepting independent property changes	Compare both editors before accepting independent property changes
+Check project changes	Check project changes
+Save this GUI in Defold, then check changes again	Save this GUI in Defold, then check changes again
+The draft changed; check project changes again	The draft changed; check project changes again
+Common version	Common version
+Absent	Absent
+Keep Craft	Keep Craft
+Use Defold	Use Defold
+Painted artwork is preserved	Painted artwork is preserved
+No project differences	No project differences
+Apply reviewed changes	Apply reviewed changes
+PhotoCraft	PhotoCraft
+Defold	Defold
+Migration saved. Preserve this draft separately, then reopen the GUI to use the migrated source	Migration saved. Preserve this draft separately, then reopen the GUI to use the migrated source
+Migration needs review; original files are preserved	Migration needs review; original files are preserved
+Project asset inventory updated	Project asset inventory updated
+Asset inspection cancelled	Asset inspection cancelled
+Reading project asset inventory...	Reading project asset inventory...
+Project assets and legacy sources	Project assets and legacy sources
+Refresh asset inventory	Refresh asset inventory
+References are incomplete; retained resources will not be deleted	References are incomplete; retained resources will not be deleted
+Active resource	Active resource
+Retained resource	Retained resource
+Legacy source review	Legacy source review
+Migration backs up the selected source and leaves this open draft unchanged	Migration backs up the selected source and leaves this open draft unchanged
+Back up and migrate selected source	Back up and migrate selected source
+Check migration status	Check migration status
+Request editing permission	Request editing permission
+Editing permission acquired; saving still checks the project version	Editing permission acquired; saving still checks the project version
+Editing permission released	Editing permission released
+Updating editing permission...	Updating editing permission...
+Reveal in Defold	Reveal in Defold
+Resource opened in Defold	Resource opened in Defold
+Saved creative source	Saved creative source
+Published version	Published version
+Used by another scene	Used by another scene
+Editor history	Editor history
+Unsaved editor changes	Unsaved editor changes
+Public game resource	Public game resource
+Incomplete reference inventory	Incomplete reference inventory
+Changed outside PhotoCraft	Changed outside PhotoCraft
+Deletion has not been requested	Deletion has not been requested
+Recovery period	Recovery period
+Verified backup required	Verified backup required
+Pending publication	Pending publication
+Shared artwork	Shared artwork
+The owner keeps the editable layers; other GUIs use a read-only reference	The owner keeps the editable layers; other GUIs use a read-only reference
+Edit the owner or make this node independent before painting	Edit the owner or make this node independent before painting
+Open artwork source	Open artwork source
+Make artwork independent	Make artwork independent
+Copy shared artwork ID	Copy shared artwork ID
+Paste a shared artwork ID	Paste a shared artwork ID
+Use shared artwork for this node	Use shared artwork for this node
+Shared artwork ID copied	Shared artwork ID copied
+Shared artwork attached; save and publish to update the game	Shared artwork attached; save and publish to update the game
+Artwork is independent and editable; the shared owner is unchanged	Artwork is independent and editable; the shared owner is unchanged
+Shared artwork source opened	Shared artwork source opened
+Review shared publication	Review shared publication
+Shared publication scope checked	Shared publication scope checked
+The document changed; review the publication scope again	The document changed; review the publication scope again
+Saved related changes have not been published	Saved related changes have not been published
+Publishing will include the saved changes in these related GUIs	Publishing will include the saved changes in these related GUIs
+Publish these saved related changes	Publish these saved related changes

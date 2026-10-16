@@ -63,7 +63,7 @@ if (-not $SkipBuild) {
   [Environment]::SetEnvironmentVariable($flagVar, '-C target-feature=+crt-static')
   # Fail the build (rather than warn) if the icon/VERSIONINFO can't be embedded.
   $env:PHOTOCRAFT_REQUIRE_WINRES = '1'
-  Invoke-Native "cargo build ($Target)" { cargo build --release --locked -p photocraft -p photocraft-cli --features heif --target $Target }
+  Invoke-Native "cargo build ($Target)" { cargo build --release --locked -p photocraft -p photocraft-cli -p photocraft-project-bridge --features heif --target $Target }
 }
 
 $Bin = Join-Path $TargetDir "$Target\release"
@@ -78,7 +78,7 @@ function Get-PeHeader([string] $Path) {
   return @{ Machine = [BitConverter]::ToUInt16($bytes, $pe + 4); Subsystem = [BitConverter]::ToUInt16($bytes, $pe + 0x5C) }
 }
 $Machine = switch ($Arch) { 'x64' { 0x8664 } 'x86' { 0x14C } 'arm64' { 0xAA64 } }
-foreach ($check in @(@('photocraft.exe', 2), @('photocraft-cli.exe', 3), @('photocraft-codex-bridge.exe', 3))) {
+foreach ($check in @(@('photocraft.exe', 2), @('photocraft-cli.exe', 3), @('photocraft-codex-bridge.exe', 3), @('photocraft-project-bridge.exe', 3))) {
   $h = Get-PeHeader (Join-Path $Bin $check[0])
   if ($h.Machine -ne $Machine) { throw "$($check[0]) is for machine 0x$('{0:X}' -f $h.Machine), expected 0x$('{0:X}' -f $Machine) ($Arch)" }
   if ($h.Subsystem -ne $check[1]) { throw "$($check[0]) has PE subsystem $($h.Subsystem), expected $($check[1])" }
@@ -87,12 +87,12 @@ foreach ($check in @(@('photocraft.exe', 2), @('photocraft-cli.exe', 3), @('phot
 $Stage = Join-Path $TargetDir "windows-package\$Arch"
 Remove-Item -Recurse -Force $Stage -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $Stage | Out-Null
-Copy-Item (Join-Path $Bin 'photocraft.exe'), (Join-Path $Bin 'photocraft-cli.exe'), (Join-Path $Bin 'photocraft-codex-bridge.exe') $Stage
+Copy-Item (Join-Path $Bin 'photocraft.exe'), (Join-Path $Bin 'photocraft-cli.exe'), (Join-Path $Bin 'photocraft-codex-bridge.exe'), (Join-Path $Bin 'photocraft-project-bridge.exe') $Stage
 foreach ($script in @('enable-codex-bridge.ps1','disable-codex-bridge.ps1','start-codex-shared.ps1')) {
   Copy-Item (Join-Path $PSScriptRoot $script) $Stage
 }
 
-& (Join-Path $PSScriptRoot 'sign.ps1') (Join-Path $Stage 'photocraft.exe') (Join-Path $Stage 'photocraft-cli.exe') (Join-Path $Stage 'photocraft-codex-bridge.exe')
+& (Join-Path $PSScriptRoot 'sign.ps1') (Join-Path $Stage 'photocraft.exe') (Join-Path $Stage 'photocraft-cli.exe') (Join-Path $Stage 'photocraft-codex-bridge.exe') (Join-Path $Stage 'photocraft-project-bridge.exe')
 
 # ---- MSI ---------------------------------------------------------------------------------------
 # The setup wizard's art, drawn here from the app icon so the MSI shows PhotoCraft rather than

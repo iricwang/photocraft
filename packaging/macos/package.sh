@@ -58,12 +58,12 @@ echo "==> PhotoCraft $VERSION for macOS ($ARCH), identity: $IDENTITY, notarize: 
 if [ "$SKIP_BUILD" = 0 ]; then
   args=()
   for t in "${TARGETS[@]}"; do args+=(--target "$t"); done
-  (cd "$ROOT" && cargo build --release --locked -p photocraft -p photocraft-cli --features heif "${args[@]}")
+  (cd "$ROOT" && cargo build --release --locked -p photocraft -p photocraft-cli -p photocraft-project-bridge --features heif "${args[@]}")
 fi
 
 rm -rf "$WORK"
 mkdir -p "$WORK/bin"
-for bin in photocraft photocraft-cli photocraft-codex-bridge; do
+for bin in photocraft photocraft-cli photocraft-codex-bridge photocraft-project-bridge; do
   inputs=()
   for t in "${TARGETS[@]}"; do inputs+=("$CARGO_TARGET_DIR/$t/release/$bin"); done
   lipo -create -output "$WORK/bin/$bin" "${inputs[@]}"
@@ -103,6 +103,7 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 # Executable and icon carry the display name (CFBundleExecutable / CFBundleIconFile).
 cp "$WORK/bin/photocraft" "$APP/Contents/MacOS/PhotoCraft"
 cp "$WORK/bin/photocraft-codex-bridge" "$APP/Contents/MacOS/photocraft-codex-bridge"
+cp "$WORK/bin/photocraft-project-bridge" "$APP/Contents/MacOS/photocraft-project-bridge"
 cp "$ROOT/assets/app-icon/photocraft.icns" "$APP/Contents/Resources/PhotoCraft.icns"
 # Licences of the embedded craft-fonts fonts (only when built with CRAFT_FONTS_DIR).
 if [ -n "${CRAFT_FONTS_DIR:-}" ]; then
@@ -118,6 +119,7 @@ printf 'APPL????' >"$APP/Contents/PkgInfo"
 # Sign inside-out: nested code first, then the bundle itself (no --deep on the final signature).
 # Sign the bundled connection helper before the containing application.
 sign --options runtime --entitlements "$HERE/entitlements.plist" "$APP/Contents/MacOS/photocraft-codex-bridge"
+sign --options runtime --entitlements "$HERE/entitlements.plist" "$APP/Contents/MacOS/photocraft-project-bridge"
 sign --options runtime --entitlements "$HERE/entitlements.plist" "$APP/Contents/MacOS/PhotoCraft"
 sign --options runtime --entitlements "$HERE/entitlements.plist" "$APP"
 codesign --verify --strict --deep --verbose=2 "$APP"

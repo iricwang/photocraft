@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "transactionId": "00000032-1111-4111-8111-111111111111",
+  "context": {
+    "projectId": "00000001-1111-4111-8111-111111111111",
+    "checkoutId": "00000002-1111-4111-8111-111111111111",
+    "workspaceId": "00000003-1111-4111-8111-111111111111",
+    "workspaceEpoch": 1
+  },
+  "clientId": "00000004-1111-4111-8111-111111111111",
+  "primarySceneId": "00000014-1111-4111-8111-111111111111",
+  "sourceRevisions": [
+    {
+      "packageId": "0000000a-1111-4111-8111-111111111111",
+      "sourceRevision": "source-1"
+    }
+  ],
+  "targets": [
+    {
+      "sceneId": "00000014-1111-4111-8111-111111111111",
+      "path": "/ui/challenge.gui",
+      "expectedPublishedRevision": null,
+      "expectedGuiDiskHash": "sha256:d494ab4e928150b14b9ae450d3247dc3421b8e54ff54fd0fdb525aa1194fe43c",
+      "expectedEditorSnapshot": "graph-1"
+    },
+    {
+      "sceneId": "00000015-1111-4111-8111-111111111111",
+      "path": "/ui/character.gui",
+      "expectedPublishedRevision": null,
+      "expectedGuiDiskHash": "sha256:d494ab4e928150b14b9ae450d3247dc3421b8e54ff54fd0fdb525aa1194fe43c",
+      "expectedEditorSnapshot": "graph-1"
+    }
+  ],
+  "leases": [
+    {
+      "resource": {
+        "resourceKind": "scene",
+        "resourceId": "00000014-1111-4111-8111-111111111111"
+      },
+      "leaseEpoch": 20
+    },
+    {
+      "resource": {
+        "resourceKind": "scene",
+        "resourceId": "00000015-1111-4111-8111-111111111111"
+      },
+      "leaseEpoch": 21
+    },
+    {
+      "resource": {
+        "resourceKind": "package",
+        "resourceId": "0000000a-1111-4111-8111-111111111111"
+      },
+      "leaseEpoch": 10
+    }
+  ],
+  "plannedFiles": [],
+  "nodeChanges": [
+    {
+      "sceneId": "00000014-1111-4111-8111-111111111111",
+      "nodes": [
+        {
+          "id": "root",
+          "parent": "",
+          "kind": "box",
+          "values": {
+            "rotation": [
+              0,
+              0,
+              45
+            ]
+          }
+        }
+      ],
+      "textures": [],
+      "renames": []
+    },
+    {
+      "sceneId": "00000015-1111-4111-8111-111111111111",
+      "nodes": [
+        {
+          "id": "root",
+          "parent": "",
+          "kind": "box",
+          "values": {
+            "rotation": [
+              0,
+              0,
+              45
+            ]
+          }
+        }
+      ],
+      "textures": [],
+      "renames": []
+    }
+  ],
+  "assetChanges": [],
+  "planHash": "sha256:f2988629bb8977cb2eb44a2f8e109c4c2727ba1b39cb45634a0ef90759c10363"
+}

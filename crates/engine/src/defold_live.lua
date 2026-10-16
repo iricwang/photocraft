@@ -1,8 +1,8 @@
 -- Executed only against the user's bound or authenticated local Defold editor.
 -- No file writes: GUI mutations use the editor's own atomic graph transaction.
 local req = REQUEST
--- Keep the linked resource open in the Defold workspace before reading or editing it.
-editor.ui.open_resource(req.path)
+-- Project resources are queried without opening tabs. Only openResource below
+-- performs an explicit user-requested navigation.
 local refs, parents = {}, {}
 local function plain(v, depth)
     if depth > 12 then error("Property nesting limit") end
@@ -29,9 +29,9 @@ local function snapshot()
                     if k ~= "nodes" then
                         local ok, v = pcall(editor.get, n, k)
                         if ok then props[k] = plain(v, 0) end
-                        -- 1.13 returns raw quaternion rotations but its setter truncates
-                        -- them to three components. Never feed those values back.
-                        local legacy_rotation = k == "rotation" and (string.match(editor.version,"^1%.13%.") or (type(v)=="table" and #v==4))
+                        -- Some editor builds expose raw quaternions through a Vec3
+                        -- setter. Detect the contract, not the release label.
+                        local legacy_rotation = k == "rotation" and not (type(v)=="table" and #v==3)
                         if editor.can_set(n, k) and not legacy_rotation then writable[#writable + 1] = k end
                     end
                 end
@@ -51,29 +51,58 @@ local function same(a,b)
     return true
 end
 local current = snapshot()
+-- Older/forked editors can report a newer version while retaining the broken
+-- quaternion getter / Vec3 setter. Never probe this by writing to the graph.
+local function prepare_rotation(values, previous)
+    local r=values.rotation
+    if not r then return end
+    assert(type(r)=="table" and #r==3,"Rotation must contain three Euler angles")
+    for i=1,3 do assert(type(r[i])=="number" and r[i]==r[i] and math.abs(r[i])<math.huge,"Invalid rotation") end
+    if previous and #previous==3 then return end
+    local before={0,0,0}
+    if previous then
+        assert(#previous==4,"Unsupported editor rotation format")
+        local x,y,z,w=previous[1],previous[2],previous[3],previous[4]
+        local atan2=math.atan2 or math.atan
+        before={math.deg(atan2(2*(w*x+y*z),1-2*(x*x+y*y))),math.deg(math.asin(math.max(-1,math.min(1,2*(w*y-z*x))))),math.deg(atan2(2*(w*z+x*y),1-2*(y*y+z*z)))}
+    end
+    for i=1,3 do
+        assert(math.abs((r[i]-before[i]+180)%360-180)<0.0001,
+            "This Defold editor cannot write rotation safely. Close the editor and sync to disk, or update Defold.")
+    end
+    -- Preserve existing rotation (or a new node's identity) without invoking
+    -- the incompatible setter, even when only position or artwork changed.
+    values.rotation=nil
+end
 if req.op == "publishDesign" then
     assert(same(current.nodes, req.expected), "GUI changed in Defold; nothing was overwritten")
     assert(type(req.directory)=="string" and string.match(req.directory,"^/photocraft_generated/[%w_/]+$"), "Invalid generated directory")
     local wanted, ordered = {}, req.nodes
     assert(type(ordered)=="table" and #ordered<=8192,"Node limit")
     for _,n in ipairs(ordered) do assert(not wanted[n.id],"Duplicate node ID"); wanted[n.id]=n end
-    local function degrees(q)
-        if #q~=4 then return q end
-        local x,y,z,w=q[1],q[2],q[3],q[4]
-        return {math.deg(math.atan(2*(w*x+y*z),1-2*(x*x+y*y))),math.deg(math.asin(math.max(-1,math.min(1,2*(w*y-z*x))))),math.deg(math.atan(2*(w*z+x*y),1-2*(y*y+z*z)))}
+    local renames, renamed, targets = req.renames or {}, {}, {}
+    for _,r in ipairs(renames) do
+        assert(type(r.from)=="string" and type(r.to)=="string" and refs[r.from],"Missing renamed node")
+        assert(not renamed[r.from] and not targets[r.to],"Duplicate node rename")
+        renamed[r.from],targets[r.to]=r.to,true
     end
+    for _,r in ipairs(renames) do assert(not refs[r.to] or renamed[r.to],"Node name is already used") end
     local old={}
-    for _,n in ipairs(current.nodes) do old[n.id]=n end
+    for _,n in ipairs(current.nodes) do
+        old[renamed[n.id] or n.id]={id=renamed[n.id] or n.id,parent=renamed[n.parent] or n.parent,properties=n.properties}
+    end
+    local sample_rotation
+    for _,n in ipairs(current.nodes) do
+        local r=n.properties.rotation
+        if type(r)=="table" then sample_rotation=r;if #r~=3 then break end end
+    end
     local rebuild={}
     for _,n in ipairs(ordered) do
         local o=old[n.id]
         if o and (o.parent~=n.parent or o.properties.type~=n.kind) then rebuild[n.id]=true end
-        local r=n.values.rotation
-        if r and string.match(editor.version,"^1%.13%.") then
-            local before=o and degrees(o.properties.rotation or {0,0,0}) or {0,0,0}
-            for i=1,3 do assert(math.abs((r[i] or 0)-(before[i] or 0))<0.0001,"This Defold version cannot write rotation safely. Close the editor and sync to disk.") end
-            n.values.rotation=nil
-        end
+        local previous=o and o.properties.rotation
+        if not o and sample_rotation and #sample_rotation==3 then previous={0,0,0} end
+        prepare_rotation(n.values,previous)
     end
     for _=1,128 do
         local changed=false
@@ -82,7 +111,7 @@ if req.op == "publishDesign" then
     end
     for id,_ in pairs(rebuild) do
         local r=old[id] and old[id].properties.rotation
-        if r and #r==4 and string.match(editor.version,"^1%.13%.") then assert(math.abs(r[1])+math.abs(r[2])+math.abs(r[3])<0.000001,"Rotated hierarchy needs offline sync in this Defold version") end
+        if r and #r==4 then assert(math.abs(r[1])+math.abs(r[2])+math.abs(r[3])<0.000001,"Rotated hierarchy needs offline sync in this Defold version") end
     end
     -- Public resource creation reloads disk resources, including newly staged atlas/PNG files.
     editor.create_directory(req.directory)
@@ -96,6 +125,21 @@ if req.op == "publishDesign" then
         else resource_tx[#resource_tx+1]=editor.tx.add(req.path,"textures",texture) end
     end
     if #resource_tx>0 then editor.transact(resource_tx) end
+    -- Rename the existing graph objects. Their children and editor selections survive.
+    -- Temporary IDs allow swaps; they are never written to GUI or asset files.
+    if #renames>0 then
+        local temporary,final={},{ }
+        for i,r in ipairs(renames) do
+            local ref=refs[r.from]
+            local id="__photocraft_rename_"..i
+            while refs[id] or wanted[id] do id=id.."_" end
+            temporary[#temporary+1]=editor.tx.set(ref,"id",id)
+            final[#final+1]=editor.tx.set(ref,"id",r.to)
+        end
+        editor.transact(temporary)
+        editor.transact(final)
+        current=snapshot()
+    end
     local removals={}
     for _,n in ipairs(current.nodes) do
         if (not wanted[n.id] or rebuild[n.id]) and (n.parent=="" or (wanted[n.parent] and not rebuild[n.parent])) then
@@ -154,6 +198,13 @@ local function skeleton(value)
     for k,v in pairs(value) do
         if k ~= "nodes" and k ~= "id" and k ~= "type" then props[k]=v end
     end
+    local previous
+    for _,n in ipairs(current.nodes) do
+        local r=n.properties.rotation
+        if type(r)=="table" and #r==3 then previous={0,0,0}
+        elseif r then previous=nil;break end
+    end
+    prepare_rotation(props,previous)
     deferred[#deferred+1]={id=value.id, properties=props}
     if value.nodes then
         result.nodes={}
@@ -196,7 +247,6 @@ if req.op ~= "snapshot" then
         for k,v in pairs(req.values) do
             assert(editor.can_set(n,k), "Read-only property: "..k)
             if k=="rotation" then
-                assert(not string.match(editor.version,"^1%.13%."),"Rotation writes are incompatible with Defold 1.13; edit rotation in Defold")
                 assert(#editor.get(n,k)==3,"Editor rotation setter is incompatible")
             end
             tx[#tx+1] = editor.tx.set(n,k,v)

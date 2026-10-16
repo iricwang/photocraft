@@ -62,7 +62,7 @@ pub fn run(s: &mut Session, p: &Value) -> Result<Value> {
         None | Some(Value::Null) => None,
         Some(v) => Some(v.as_str().ok_or_else(|| bad("`name` must be a string"))?.to_string()),
     };
-    let id = s.edit("New Layer", |doc, active| {
+    let id = s.edit_structure("New Layer", |doc, active| {
         let name = name.clone().unwrap_or_else(|| doc.next_layer_name("Layer"));
         let mut layer = Layer::raster(name, doc.pixel_format());
         layer.blend = mode;

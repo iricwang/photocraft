@@ -358,7 +358,7 @@ pub(crate) const NEW_LAYER_PATH: &str =
 fn new_adjustment(s: &mut Session, adj: Adjustment, p: &Value, cmd: &str) -> Result<Value> {
     let label = format!("New {} Layer", adj.label());
     let name = adj.label().to_string();
-    let id = s.edit(&label, |doc, active| {
+    let id = s.edit_structure(&label, |doc, active| {
         let mut l = Layer::new(doc.next_layer_name(&name), LayerContent::Adjustment(adj));
         mask_new_layer(doc, &mut l, p, cmd)?;
         let id = doc.insert_above(*active, l);
@@ -492,6 +492,7 @@ fn build() -> Vec<CommandSpec> {
         ),
         cmd!("file.close", "Close", ["File"], Some("Cmd+W"), r##"{"document":index?}"##, crate::defold_cmds::has_any_document, |s, p| {
             let i = p.get("document").and_then(Value::as_u64).map(|v| v as usize).or(s.active_index()).ok_or(EngineError::NoDocument)?;
+            s.ensure_closeable(i)?;
             s.close(i).ok_or(EngineError::NoDocument)?;
             Ok(Value::Null)
         }),
@@ -625,7 +626,7 @@ fn build() -> Vec<CommandSpec> {
             crate::new_layer::run
         ),
         cmd!("layer.new.group", "Group…", ["Layer", "New"], None, r##"{"name":str?}"##, has_doc, |s, p| {
-            let id = s.edit("New Group", |doc, active| {
+            let id = s.edit_structure("New Group", |doc, active| {
                 let name = p.get("name").and_then(Value::as_str).map(str::to_string).unwrap_or_else(|| doc.next_layer_name("Group"));
                 let id = doc.insert_above(*active, Layer::group(name, vec![]));
                 *active = Some(id);
@@ -674,11 +675,13 @@ fn build() -> Vec<CommandSpec> {
                 }
                 let id = layer_param(s, p)?;
                 let before = s.active().ok_or(EngineError::NoDocument)?.doc.clone();
-                let nid = s.edit("Duplicate Layer", |doc, active| {
+                let nid = s.edit_structure("Duplicate Layer", |doc, active| {
                     let mut dup = layer_copy(doc, id)?;
                     if let Some(name) = &name {
                         dup.name.clone_from(name);
                     }
+                    let original = before.layer(id).ok_or(EngineError::NoLayer(id))?;
+                    crate::defold_design_reconcile::copy_roles(doc, &before, original, &dup)?;
                     let nid = doc.insert_above(Some(id), dup);
                     if !in_place {
                         crate::artboard_cmds::place_copy(doc, nid)?;
@@ -695,7 +698,7 @@ fn build() -> Vec<CommandSpec> {
                 return crate::layer_multi_cmds::delete_selected(s);
             }
             let id = layer_param(s, p)?;
-            s.edit("Delete Layer", |doc, active| {
+            s.edit_structure("Delete Layer", |doc, active| {
                 let neighbours = crate::layer_multi_cmds::deletion_neighbours(doc, id);
                 let before = crate::clip_group::Before::read(doc, &[id]);
                 doc.remove(id).ok_or(EngineError::NoLayer(id))?;
@@ -866,7 +869,7 @@ fn build() -> Vec<CommandSpec> {
         )),
         cmd!("layer.mergeDown", "Merge Down", ["Layer"], None, r##"{"layer":id?}"##, has_layer, |s, p| {
             let id = layer_param(s, p)?;
-            s.edit("Merge Down", |doc, active| {
+            s.edit_structure("Merge Down", |doc, active| {
                 let path = doc.path_of(id).ok_or(EngineError::NoLayer(id))?;
                 let Some((&idx, parent)) = path.split_last() else { return Err(EngineError::NoLayer(id)) };
                 if idx == 0 {
@@ -892,7 +895,7 @@ fn build() -> Vec<CommandSpec> {
             merge_group(s, id)
         }),
         cmd!("layer.flattenImage", "Flatten Image", ["Layer"], None, "{}", has_doc, |s, _| {
-            s.edit("Flatten Image", |doc, active| {
+            s.edit_structure("Flatten Image", |doc, active| {
                 let fmt = doc.pixel_format();
                 let mut bg = Layer::raster("Background", fmt);
                 bg.locks.transparency = true;
@@ -913,7 +916,7 @@ fn build() -> Vec<CommandSpec> {
             has_doc,
             |s, p| {
                 let c = color_param(p, "color", s.tools.foreground);
-                let id = s.edit("New Color Fill Layer", |doc, active| {
+                let id = s.edit_structure("New Color Fill Layer", |doc, active| {
                     let fill = Fill::Solid(Color::rgba(c[0], c[1], c[2], c[3])).in_mode(doc.mode);
                     let mut l = Layer::new(doc.next_layer_name("Color Fill"), LayerContent::Fill(fill));
                     mask_new_layer(doc, &mut l, p, "layer.newFillLayer.solidColor")?;
@@ -937,7 +940,7 @@ fn build() -> Vec<CommandSpec> {
                 let angle = f32_or(p, "angle", 90.0);
                 let style = crate::layer_style::gradient_style(p.get("style").and_then(Value::as_str).unwrap_or("linear"));
                 let reverse = p.get("reverse").and_then(Value::as_bool).unwrap_or(false);
-                let id = s.edit("New Gradient Fill Layer", |doc, active| {
+                let id = s.edit_structure("New Gradient Fill Layer", |doc, active| {
                     let fill = Fill::gradient(
                         vec![(0.0, Color::rgba(a[0], a[1], a[2], a[3])), (1.0, Color::rgba(b[0], b[1], b[2], b[3]))],
                         angle,
@@ -1419,6 +1422,9 @@ fn build() -> Vec<CommandSpec> {
     v.extend(crate::actions_cmds::specs());
     v.extend(crate::defold_cmds::specs());
     v.extend(crate::defold_design::specs());
+    v.extend(crate::defold_project_cmds::specs());
+    v.extend(crate::defold_project_assets_cmds::specs());
+    v.extend(crate::defold_shared_design::specs());
     v.extend(crate::peer_binding::specs());
     v.extend(crate::ai_cmds::specs());
     v.extend(crate::ai_project_cmds::specs());
@@ -1476,7 +1482,7 @@ pub fn adjustment_kind(a: &Adjustment) -> &'static str {
 
 fn arrange(s: &mut Session, p: &Value, delta: i32) -> Result<Value> {
     let id = layer_param(s, p)?;
-    s.edit("Arrange", |doc, _| {
+    s.edit_structure("Arrange", |doc, _| {
         // The Background stays at the bottom: it doesn't move and nothing goes below it.
         let bg = crate::background_cmds::background_id(doc);
         if bg == Some(id) {
@@ -1602,7 +1608,7 @@ pub(crate) fn layer_copy(doc: &Document, id: LayerId) -> Result<Layer> {
 /// group's opacity, blend mode (Pass Through becomes Normal), clipping and locks; the group's mask
 /// and style are applied to the pixels.
 fn merge_group(s: &mut Session, id: LayerId) -> Result<Value> {
-    s.edit("Merge Group", |doc, active| {
+    s.edit_structure("Merge Group", |doc, active| {
         let group = doc.layer(id).ok_or(EngineError::NoLayer(id))?.clone();
         if !group.visible {
             return Err(EngineError::Other("the group is hidden".into()));

@@ -38,10 +38,38 @@ pub mod commands;
 pub mod comps_cmds;
 mod crop_fill;
 pub mod cutout_cmds;
+mod defold_assets;
+pub mod defold_atlas;
 pub mod defold_cmds;
 pub mod defold_design;
+pub mod defold_design_conflicts;
+pub(crate) mod defold_design_reconcile;
 pub mod defold_live;
-pub mod peer_binding;
+pub mod defold_migration;
+pub mod defold_project_client;
+pub mod defold_project_assets_cmds;
+pub mod defold_project_cmds;
+pub mod defold_project_connection;
+pub mod defold_project_conflict_client;
+mod defold_project_dependencies;
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) mod defold_project_editor;
+#[cfg(not(target_arch = "wasm32"))]
+mod defold_project_fs;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod defold_project_local;
+pub mod defold_project_model;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod defold_project_net;
+#[cfg(not(target_arch = "wasm32"))]
+mod defold_project_publication;
+pub mod defold_project_publish_client;
+pub mod defold_shared_design;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod defold_project_remote;
+pub mod defold_project_store;
+pub mod defold_project_wire;
+pub mod defold_publish_plan;
 pub mod display_color;
 pub mod distort_cmds;
 pub mod document_preset_cmds;
@@ -94,6 +122,7 @@ mod param_check;
 mod path_edit_cmds;
 pub mod pattern_cmds;
 pub mod pattern_fill_cmds;
+pub mod peer_binding;
 pub mod perspective_crop_cmds;
 pub mod photo_cmds;
 pub mod pick_cmds;
@@ -426,6 +455,8 @@ impl Default for ToolState {
 pub struct Session {
     /// Defold documents have their own history and never masquerade as image documents.
     pub gui: defold_cmds::GuiWorkspace,
+    /// Host acknowledgements and credentials are runtime state, never Undo data.
+    pub project_client: defold_project_client::ClientState,
     docs: Vec<DocState>,
     active: Option<usize>,
     pub tools: ToolState,
@@ -609,10 +640,22 @@ impl Session {
         Some((doc, read_only))
     }
 
-    pub fn close(&mut self, index: usize) -> Option<DocState> {
-        if index >= self.docs.len() {
-            return None;
+    pub(crate) fn ensure_closeable(&self, index: usize) -> Result<()> {
+        let closing = self.docs.get(index).ok_or(EngineError::NoDocument)?;
+        if self
+            .jobs()
+            .iter()
+            .any(|job| job.state == "running" && job.document == Some(closing.doc.id) && defold_project_client::is_project_commit(&job.command))
+        {
+            return Err(EngineError::Other("The project save or publication must finish before closing this document".into()));
         }
+        Ok(())
+    }
+
+    pub fn close(&mut self, index: usize) -> Option<DocState> {
+        self.ensure_closeable(index).ok()?;
+        let closing = self.docs.get(index)?;
+        let open_id = closing.open_id;
         smart_cmds::on_close(self, index);
         if let Some(id) = self.docs.get(index).map(|d| d.doc.id) {
             self.ai.forget_document(id);
@@ -621,6 +664,9 @@ impl Session {
             self.object_finder.forget_doc(id);
         }
         let d = self.docs.remove(index);
+        defold_project_client::on_close(self, open_id);
+        self.project_client.acknowledged_openings.remove(&open_id);
+        self.project_client.asset_management.remove(&open_id);
         self.active = if self.docs.is_empty() || self.gui.active.is_some() {
             None
         } else {
@@ -714,6 +760,7 @@ impl Session {
         if spec.id.starts_with("defold.") && !cfg!(feature = "defold-gui") {
             return Err("Defold GUI integration is disabled in this build".into());
         }
+        defold_shared_design::command_precondition(self, spec.id, params).map_err(|error| error.to_string())?;
         if self.names_existing_layer(spec.id, params) {
             return Ok(());
         }
@@ -820,6 +867,16 @@ impl Session {
             self.object_finder = Default::default();
         }
         Ok(r)
+    }
+
+    /// A native structural edit also maintains explicit GUI roles in the same
+    /// Undo step. Painting and property transforms never enter this tree walk.
+    pub fn edit_structure<R>(&mut self, label: &str, f: impl FnOnce(&mut Document, &mut Option<LayerId>) -> Result<R>) -> Result<R> {
+        self.edit(label, |doc, active| {
+            let result = f(doc, active)?;
+            defold_design_reconcile::structure_changed(doc)?;
+            Ok(result)
+        })
     }
 
     /// Replace the active document's active layer without creating a history step.

@@ -63,7 +63,6 @@ pub mod color_picker_ui;
 pub mod color_range_ui;
 pub mod comps_ui;
 pub mod control;
-mod peer_binding_ui;
 pub mod corner_radius;
 pub mod credits;
 pub mod crop_mode;
@@ -164,6 +163,7 @@ pub mod parity;
 pub mod patch_preview;
 pub(crate) mod pattern_fill_ui;
 pub mod pattern_preview;
+mod peer_binding_ui;
 pub mod perspective_crop_ui;
 pub mod perspective_ui;
 pub mod pixel_grid;
@@ -1487,6 +1487,9 @@ impl PhotocraftApp {
 
     /// File › Save back to the document's own layered file, recorded as a `file.save` step.
     pub(crate) fn save_in_place(&mut self, path: String) -> Result<Value, String> {
+        if self.session.active().is_some_and(|st| st.doc.defold.is_some()) {
+            return self.run("defold.saveDesignSource", serde_json::json!({}));
+        }
         if self.save_options_open() {
             return Err("Answer TIFF or Targa Options before starting another save".into());
         }
@@ -1605,6 +1608,8 @@ impl PhotocraftApp {
     /// `None` when the save went to a background job (#2017), which finishes it in
     /// [`jobs_ui::tick`].
     pub(crate) fn write_document(&mut self, path: String, settings: &ExportSettings, copy: bool) -> Result<Option<(String, Vec<String>)>, String> {
+        // A linked GUI exports a copy; only its project source receipt can mark it saved.
+        let copy = copy || self.session.active().is_some_and(|st| st.doc.defold.is_some());
         if self.background_jobs
             && let Some(save) = self.services.save_file.clone()
         {
@@ -1691,6 +1696,7 @@ impl PhotocraftApp {
     /// A save is running in the background.
     pub(crate) fn saving(&self) -> bool {
         !self.jobs.saves.is_empty()
+            || self.session.jobs().iter().any(|job| photocraft_engine::defold_project_client::is_project_commit(&job.command) && job.state == "running")
     }
 
     /// Save through the control session's capability-scoped writer. No file

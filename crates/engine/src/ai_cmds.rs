@@ -99,7 +99,7 @@ fn test_target(s: &Session) -> std::result::Result<(), String> {
     target_with_limit(s, MAX_TEST_PIXELS, false)
 }
 
-fn target_with_limit(s: &Session, limit: u64, linked_allowed:bool) -> std::result::Result<(), String> {
+fn target_with_limit(s: &Session, limit: u64, linked_allowed: bool) -> std::result::Result<(), String> {
     if crate::channel_cmds::edits_channel(s) || s.tools.mask_targeted {
         return Err("AI candidates require layer pixels, not a mask or channel".into());
     }
@@ -114,14 +114,23 @@ fn target_with_limit(s: &Session, limit: u64, linked_allowed:bool) -> std::resul
         return Err("drop the floating selection before creating a candidate".into());
     }
     let layer = crate::active_layer_of(s)?;
-    let node_art = linked_allowed.then(||crate::defold_design::node_for_layer(&st.doc,layer.id)).flatten()
-        .and_then(|n|st.doc.layer(photocraft_doc::LayerId(n.artwork))).filter(|l|l.surface().is_some());
+    let node_art = linked_allowed
+        .then(|| crate::defold_design::node_for_layer(&st.doc, layer.id))
+        .flatten()
+        .and_then(|n| st.doc.layer(photocraft_doc::LayerId(n.artwork)))
+        .filter(|l| l.surface().is_some());
     if !matches!(layer.content, LayerContent::Raster(_)) && node_art.is_none() {
         return Err("AI candidates require a raster layer".into());
     }
     crate::commands::check_pixels_unlocked(&st.doc, layer.id).map_err(|e| e.to_string())?;
-    if let Some(art)=node_art {crate::commands::check_pixels_unlocked(&st.doc,art.id).map_err(|e|e.to_string())?;}
-    let bounds=node_art.and_then(|l|photocraft_compose::composite_bounds(l,st.doc.bounds())).map(|r|r.intersect(&st.doc.bounds())).filter(|r|!r.is_empty()).unwrap_or(st.doc.bounds());
+    if let Some(art) = node_art {
+        crate::commands::check_pixels_unlocked(&st.doc, art.id).map_err(|e| e.to_string())?;
+    }
+    let bounds = node_art
+        .and_then(|l| photocraft_compose::composite_bounds(l, st.doc.bounds()))
+        .map(|r| r.intersect(&st.doc.bounds()))
+        .filter(|r| !r.is_empty())
+        .unwrap_or(st.doc.bounds());
     let area = st.doc.selection.as_ref().map_or(bounds, |s| s.content_bounds().intersect(&st.doc.bounds()));
     let pixels = u64::from(area.width()) * u64::from(area.height());
     if area.is_empty() || pixels == 0 {
@@ -285,15 +294,29 @@ fn begin(s: &mut Session, p: &Value) -> Result<Value> {
         return Err(bad(ID, "AI history is full; remove a generation record first"));
     }
     let layer = st.active_layer.ok_or_else(|| bad(ID, "no active layer"))?;
-    if destination=="candidate" && st.doc.layer(layer).is_some_and(|l|!matches!(l.content,LayerContent::Raster(_))) {return Err(bad(ID,"Generate to a new layer for a GUI group or text node"));}
+    if destination == "candidate" && st.doc.layer(layer).is_some_and(|l| !matches!(l.content, LayerContent::Raster(_))) {
+        return Err(bad(ID, "Generate to a new layer for a GUI group or text node"));
+    }
     let node_area = crate::defold_design::node_for_layer(&st.doc, layer)
         .and_then(|n| st.doc.layer(photocraft_doc::LayerId(n.artwork)))
         .and_then(|l| photocraft_compose::composite_bounds(l, st.doc.bounds()))
-        .map(|r| r.intersect(&st.doc.bounds())).filter(|r| !r.is_empty());
+        .map(|r| r.intersect(&st.doc.bounds()))
+        .filter(|r| !r.is_empty());
     let area = st.doc.selection.as_ref().map_or(node_area.unwrap_or(st.doc.bounds()), |m| m.content_bounds().intersect(&st.doc.bounds()));
-    let pixels = st.doc.layer(layer).and_then(|l| l.surface()).or_else(||crate::defold_design::node_for_layer(&st.doc,layer)
-        .and_then(|n|st.doc.layer(photocraft_doc::LayerId(n.artwork))).and_then(|l|l.surface())).ok_or(EngineError::NoLayer(layer))?.clone();
-    let frame = if mode == GenerationMode::Repaint { (st.doc.selection.is_some()||node_area.is_some()).then(|| edit_frame(area, st.doc.bounds())).transpose()? } else { None };
+    let pixels = st
+        .doc
+        .layer(layer)
+        .and_then(|l| l.surface())
+        .or_else(|| {
+            crate::defold_design::node_for_layer(&st.doc, layer).and_then(|n| st.doc.layer(photocraft_doc::LayerId(n.artwork))).and_then(|l| l.surface())
+        })
+        .ok_or(EngineError::NoLayer(layer))?
+        .clone();
+    let frame = if mode == GenerationMode::Repaint {
+        (st.doc.selection.is_some() || node_area.is_some()).then(|| edit_frame(area, st.doc.bounds())).transpose()?
+    } else {
+        None
+    };
     // Keep a local full-canvas snapshot for on-demand MCP reads, separate from inline inputs.
     let context = if needs_canvas {
         Some(crate::ai_component::reference(&st.doc, st.doc.bounds(), if mode == GenerationMode::Component { 1024 } else { 1536 })?)
@@ -686,6 +709,14 @@ fn receive_layer(s: &mut Session, c: &Candidate, mut image: Document, expand: bo
             && st.doc.mode == c.base.mode
             && st.doc.depth == c.base.depth
             && st.doc.icc_profile == c.base.icc_profile
+            && (c.base.defold.is_none()
+                || (st.doc.defold.is_some()
+                    && st.doc.defold.as_ref().and_then(|d| d.project.as_ref()).map(|p| (&p.project_id, &p.scene_id, &p.package_id))
+                        == c.base.defold.as_ref().and_then(|d| d.project.as_ref()).map(|p| (&p.project_id, &p.scene_id, &p.package_id))
+                    && crate::defold_design::node_for_layer(&st.doc, c.layer).is_some()
+                    && st.doc.layer(c.layer).zip(c.base.layer(c.layer)).is_some_and(|(current, original)| {
+                        current.content == original.content && current.mask == original.mask && current.vector_mask == original.vector_mask
+                    })))
             && st.floating.is_none()
             && s.job_on(st.doc.id).is_none()
     });
@@ -753,10 +784,8 @@ fn receive_layer(s: &mut Session, c: &Candidate, mut image: Document, expand: bo
         for peer in peers {
             if let Some(layer) = doc.layer_mut(peer) { layer.visible = false; }
         }
-        let node = crate::defold_design::node_for_layer(doc, c.layer).map(|n| photocraft_doc::LayerId(n.layer));
-        if let Some(parent) = node.and_then(|id| doc.layer_mut(id))
-            && let LayerContent::Group(group) = &mut parent.content {
-            group.children.push(layer);
+        if doc.defold.is_some() {
+            crate::defold_design::insert_artwork(doc, c.layer, layer)?;
         } else {
             doc.layers.push(layer);
         }

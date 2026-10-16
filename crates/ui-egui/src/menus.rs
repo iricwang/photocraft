@@ -157,7 +157,9 @@ fn workspace_name(id: &str) -> Option<&'static str> {
 
 /// Run a command id from any source (menu, shortcut, palette, automation).
 pub fn invoke(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, params: Value) -> Result<Value, String> {
-    if photocraft_engine::peer_binding::state().frozen { return Err("Wait for the application binding switch to finish".into()); }
+    if photocraft_engine::peer_binding::state().frozen {
+        return Err("Wait for the application binding switch to finish".into());
+    }
     if app.automation_input
         && let Some(authorize) = app.services.automation_command.as_ref()
     {
@@ -323,6 +325,9 @@ pub(crate) fn invoke_unguarded(app: &mut PhotocraftApp, ctx: &egui::Context, id:
         }
         "file.import.videoFramesToLayers" if params.get("path").and_then(Value::as_str).is_none() => {
             app.ask_folder(|app, path| app.run("file.import.videoFramesToLayers", json!({"path": path})).map_err(|e| e.to_string()))
+        }
+        "file.save" if params.get("path").is_none() && app.session.active().is_some_and(|st| st.doc.defold.is_some()) => {
+            app.run("defold.saveDesignSource", json!({}))
         }
         "file.save" => {
             // Writes back only to a layered file that holds the whole document; anything else

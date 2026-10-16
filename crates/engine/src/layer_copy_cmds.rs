@@ -191,11 +191,12 @@ fn copy_to_document(s: &mut Session, p: &Value) -> Result<Value> {
     let patterns: Vec<_> = sdoc.patterns.iter().filter(|pat| !ddoc.patterns.iter().any(|d| d.id == pat.id)).cloned().collect();
     s.set_active(dest);
     let label = if ids.len() == 1 { "Duplicate Layer" } else { "Duplicate Layers" };
-    let edited = s.edit(label, |doc, active| {
+    let edited = s.edit_structure(label, |doc, active| {
         doc.patterns.extend(patterns);
         let mut above = *active;
         let mut new = Vec::with_capacity(copies.layers.len());
-        for l in copies.layers {
+        for (source_id, l) in ids.iter().zip(copies.layers) {
+            crate::defold_design_reconcile::copy_roles(doc, &sdoc, sdoc.layer(*source_id).ok_or(EngineError::NoLayer(*source_id))?, &l)?;
             let id = doc.insert_above(above, l);
             above = Some(id);
             new.push(id);
