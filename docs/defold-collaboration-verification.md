@@ -64,6 +64,29 @@ SHA-256：`97b46a458110b8410665b820203acaf8e282d666af76f1a80a8ecdd2c3fd326f`。
 
 重连修复版已构建并更新两个启动入口。程序为 `target/debug/photocraft-project-collab-reconnect.exe`，SHA-256 为 `fd841db579e137f489bee9984e1754b2d63657075d87e98298ab9f4436cabc7d`；原有协同版保留。引擎静态检查通过，保留一项与本次无关的既有警告（`color_to_alpha_cmds.rs:68`），没有将整个引擎宣称为严格零警告。
 
+## 已完成发布的回执恢复（2026-10-16）
+
+真实 `ui_window_challenge.gui` 发布出现过 Defold 已落盘为 `COMMITTED`、PhotoCraft
+仍停在 `APPLYING` 的情况。原因是客户端只短暂查询执行状态，下一次手动同步却直接
+拒绝旧的非终态记录，没有先向权威端确认它是否已经完成。
+
+手动同步现在会先确认旧事务；完成后再发布当前画稿，不重新应用旧计划。Defold
+已经关闭时，主机可以读取它持久化的 `COMMITTED` 回执；仍需校验原事务 ID、计划哈希、
+每个 GUI 和资源的实际保存哈希，再正常归档并提交资产目录。未完成、身份不符或
+输出被修改的回执不能被当作发布成功。恢复仅由显式同步或状态检查触发。
+
+新增回归覆盖丢失回执后的再次手动同步、Defold 关闭后的回执确认，以及输出发生
+外部修改时拒绝确认。旧回执不会替换较新的本地像素，也不会把旧计划再应用一次。
+发布客户端 23 项、事务持久化 20 项、编辑器协议 2 项测试通过。
+
+现场事务 `4a570752-6d84-4454-a9a9-4c8c1b4f13c9` 已使用同一恢复路径确认为
+`COMMITTED`，4 个输出的前后哈希一致。该步骤只补齐 PhotoCraft 的归档及资产目录，
+没有重写游戏 GUI 和贴图。恢复前快照及确认回执保存在
+`X:/AI/UI/deliverables/photocraft-publication-recovery-4a570752/`。
+
+维护入口为 `cargo run -p photocraft-engine --example recover_defold_publication -- <project-directory> <transaction-id>`。
+它只查询和确认指定的既有事务，不创建或应用新计划。
+
 ## 验收边界
 
 所有写入联调使用有明确测试标记的隔离工程 `X:/AI/UI/defold/tmp/craft-adapter/packaged-final-game-project`。原游戏 `X:/Projs/FortySix-MiniGame` 在此次收尾中未被写入。

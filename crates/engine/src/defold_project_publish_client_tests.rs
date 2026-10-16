@@ -86,6 +86,13 @@ impl Editor {
                         let tx = body["transactionId"].as_str().unwrap();
                         let value = apply(&root, tx);
                         states.insert(tx.into(), value.clone());
+                        let mut journal = value.clone();
+                        journal["schemaVersion"] = json!(1);
+                        journal["transactionId"] = body["transactionId"].clone();
+                        journal["planHash"] = body["planHash"].clone();
+                        let directory = root.join(".internal/photocraft/adapter-transactions");
+                        std::fs::create_dir_all(&directory).unwrap();
+                        std::fs::write(directory.join(format!("{tx}.json")), serde_json::to_vec(&journal).unwrap()).unwrap();
                         if drop_reply.swap(false, Ordering::AcqRel) {
                             continue;
                         }
@@ -279,6 +286,53 @@ fn lost_apply_reply_recovers_same_transaction_without_saving_a_new_source_or_rea
     assert_eq!(&*session.active().unwrap().doc, &*edited, "late publication acknowledgement cannot replace newer pixels");
     assert_eq!(editor.apply_count.load(Ordering::Acquire), 1);
     assert_eq!(editor.requests.lock().unwrap().iter().filter(|(route, _)| route == "/craft/v1/publish/prepare").count(), 1);
+}
+
+// A second manual sync acknowledges the old transaction before publishing newer pixels.
+#[test]
+fn manual_sync_reconciles_lost_acknowledgement_before_publishing_new_edits() {
+    let (_dir, editor, mut session) = fixture();
+    editor.drop_apply.store(true, Ordering::Release);
+    let first = session.execute("defold.syncDesign", json!({})).unwrap();
+    assert_eq!(first["publication"]["phase"], "RECOVERY_REQUIRED");
+    session.execute("paint.stroke", json!({"points":[[30,30],[42,30]],"size":6,"color":"#00ff00"})).unwrap();
+    let second = session.execute("defold.syncDesign", json!({})).unwrap();
+    assert_eq!(second["synced"], true, "{second}");
+    assert_ne!(second["publication"]["transactionId"], first["publication"]["transactionId"]);
+    assert_eq!(editor.apply_count.load(Ordering::Acquire), 2, "the old plan must not be reapplied");
+    assert_ne!(second["publication"]["sourceRevisions"], first["publication"]["sourceRevisions"]);
+}
+
+// Saved editor receipts remain recoverable after shutdown without overwriting newer local paint.
+#[test]
+fn completed_editor_journal_recovers_after_shutdown_without_reapplying() {
+    let (_dir, editor, mut session) = fixture();
+    editor.drop_apply.store(true, Ordering::Release);
+    let first = session.execute("defold.syncDesign", json!({})).unwrap();
+    let source = client::status(&session)["sourceRevision"].clone();
+    session.execute("paint.stroke", json!({"points":[[30,30],[42,30]],"size":6,"color":"#00ff00"})).unwrap();
+    let edited = session.active().unwrap().doc.clone();
+    drop(editor);
+    let confirmed = session.execute("defold.refreshPublication", json!({})).unwrap();
+    assert_eq!(confirmed["synced"], true, "{confirmed}");
+    assert_eq!(confirmed["publication"]["transactionId"], first["publication"]["transactionId"]);
+    assert_eq!(client::status(&session)["sourceRevision"], source);
+    assert_eq!(&*session.active().unwrap().doc, &*edited);
+}
+
+// A persisted completion cannot acknowledge an output that changed after the editor saved it.
+#[test]
+fn offline_completion_rejects_changed_output_and_preserves_draft() {
+    let (dir, editor, mut session) = fixture();
+    editor.drop_apply.store(true, Ordering::Release);
+    session.execute("defold.syncDesign", json!({})).unwrap();
+    drop(editor);
+    std::fs::write(dir.path().join("main.gui"), b"nodes {id:\"external\" type:TYPE_BOX}\n").unwrap();
+    let draft = session.active().unwrap().doc.clone();
+    let confirmed = session.execute("defold.refreshPublication", json!({})).unwrap();
+    assert_eq!(confirmed["synced"], false);
+    assert_eq!(confirmed["publication"]["error"]["code"], "TARGET_CHANGED");
+    assert_eq!(&*session.active().unwrap().doc, &*draft);
 }
 #[test]
 fn dirty_or_externally_changed_target_never_publishes_or_discards_local_pixels() {

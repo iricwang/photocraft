@@ -249,7 +249,22 @@ pub(crate) fn apply(root: &Path, plan: &PublishPlan) -> ProjectResult<EditorStat
     operation(root, "/craft/v1/publish/apply", plan)
 }
 pub(crate) fn status(root: &Path, plan: &PublishPlan) -> ProjectResult<EditorStatus> {
-    operation(root, "/craft/v1/publish/status", plan)
+    match operation(root, "/craft/v1/publish/status", plan) {
+        Err(failure) if matches!(failure.code, ProjectErrorCode::EditorUnavailable | ProjectErrorCode::Io) => {
+            // A completed editor journal survives shutdown and a lost HTTP reply.
+            // The authority still verifies every saved file before committing it.
+            let path = disk::scoped_path(root, &format!(".internal/photocraft/adapter-transactions/{}.json", plan.transaction_id), false)?;
+            if !path.is_file() {
+                return Err(failure);
+            }
+            let value: Value = disk::read_json(&path, RESPONSE_LIMIT)?;
+            if value.get("state").and_then(Value::as_str) != Some("COMMITTED") {
+                return Err(failure);
+            }
+            decode_status(value, plan)
+        }
+        outcome => outcome,
+    }
 }
 pub(crate) fn cancel(root: &Path, plan: &PublishPlan) -> ProjectResult<EditorStatus> {
     operation(root, "/craft/v1/publish/cancel", plan)

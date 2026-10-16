@@ -389,12 +389,25 @@ fn publish_captured(
         return Err(engine("RECOVERY_REQUIRED: Confirm the pending creative-source save before reviewing or publishing related GUIs"));
     }
     let request = SceneRequest { context: binding.context.clone(), scene_id: binding.scene.scene_id.clone(), path: binding.scene.path.clone() };
-    let latest = binding.store.latest_publication(&request).map_err(engine)?;
+    let mut latest = binding.store.latest_publication(&request).map_err(engine)?;
     if let Some(pending) = latest.as_ref().filter(|receipt| !receipt.phase.is_terminal()) {
-        return Err(engine(format!(
-            "RECOVERY_REQUIRED: Finish transaction {} ({:?}) before creating a new publication",
-            pending.transaction_id, pending.phase
-        )));
+        // A short polling window or lost reply must not permanently block the
+        // next manual sync. Reconcile the original transaction before planning.
+        let transaction = PublishRequest { context: binding.context.clone(), transaction_id: pending.transaction_id.clone() };
+        let recovered = binding.store.publish_status(&transaction).map_err(engine)?.ok_or_else(|| engine("Publication receipt is missing"))?;
+        if recovered.context != binding.context || recovered.transaction_id != pending.transaction_id || recovered.plan_hash != pending.plan_hash {
+            return Err(engine("IDEMPOTENCY_MISMATCH: Publication status changed transaction identity"));
+        }
+        if !recovered.phase.is_terminal() {
+            return Err(engine(format!(
+                "RECOVERY_REQUIRED: Transaction {} is still {:?}; check publication status before retrying",
+                recovered.transaction_id, recovered.phase
+            )));
+        }
+        if binding.pending_publication.as_ref().is_some_and(|pending| pending.0 == recovered.transaction_id) {
+            binding.pending_publication = None;
+        }
+        latest = Some(recovered);
     }
     client::acquire_or_renew(binding)?;
     if let Some(published) = batch::publish_if_shared(
