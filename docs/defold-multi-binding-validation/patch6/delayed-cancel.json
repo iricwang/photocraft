@@ -1,0 +1,8 @@
+{
+  "requests": 1,
+  "bound": false,
+  "manifest_waiting": true,
+  "released": true,
+  "cleanup_seen": true,
+  "old_ticket_rejected": true
+}

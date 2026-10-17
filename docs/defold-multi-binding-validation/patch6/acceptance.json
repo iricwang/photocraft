@@ -1,0 +1,47 @@
+{
+  "source": "f5b1f09d12a3e5ecdf0e6311bbb8d8b35140928a",
+  "platform": "macos-aarch64",
+  "revision": 6,
+  "defold_revision": 31,
+  "local_update": {
+    "from": 5,
+    "to": 6,
+    "downloaded": true,
+    "installed": true,
+    "restart_health_ack": true,
+    "inventory_files": 9,
+    "inventory_exact": true
+  },
+  "native_cases": {
+    "four_connections": true,
+    "client_selective_disconnect": true,
+    "editor_selective_disconnect": true,
+    "explicit_rebind_both_directions": true,
+    "offline_retains_other_project": true,
+    "restart_automatically_recovers": true,
+    "late_transfer_cannot_resurrect": true,
+    "revoked_ticket_rejected": true,
+    "dirty_draft_retained": true,
+    "same_gui_name_origin_routing": true,
+    "no_cross_client_open": true,
+    "duplicate_gui_open_reuses_document": true
+  },
+  "package": {
+    "bytes": 34274185,
+    "sha256": "052f217b63ec27a690d5dbca8782061c33d94ecb496ed9d96867a2e2fea7b454",
+    "base_tree": "a25e457a47fc45aaad48a6c4ea2249334ed3bc7f073eac433ac58749c916ef18",
+    "target_tree": "2812cdce41c7dd50c723659427191fdeb7fab3a6b7d882dc5dac176078faa603"
+  },
+  "github_update": {
+    "from": 5,
+    "to": 6,
+    "feed": "published GitHub HTTPS",
+    "downloaded": true,
+    "installed": true,
+    "restart_health_ack": true,
+    "inventory_exact": true,
+    "inventory_files": 9
+  },
+  "release_url": "https://github.com/iricwang/photocraft/releases/tag/patch-ai-p0-6",
+  "moving_feed": "https://github.com/iricwang/photocraft/releases/download/patch-ai-p0/manifest-macos-aarch64.json"
+}

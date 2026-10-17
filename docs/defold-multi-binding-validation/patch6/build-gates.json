@@ -1,0 +1,17 @@
+{
+  "passed": 5345,
+  "failed": 0,
+  "ignored": 41,
+  "binaries": 93,
+  "exit": "0",
+  "source": "f5b1f09d12a3e5ecdf0e6311bbb8d8b35140928a",
+  "checks": {
+    "clippy-final": 0,
+    "panic-hunt": 0,
+    "layers": 0,
+    "wasm-final": 0,
+    "parity": 0
+  },
+  "panic_hunt_passed": 1,
+  "parity": "631/631"
+}

@@ -1,3 +1,5 @@
+Latest follow-up: [patch.6 disconnect/cancellation acceptance](patch6/README.md) (2026-10-18).
+
 # Native many-to-many acceptance — 2026-10-17
 
 PhotoCraft patch.5, source `744d4f340e15ba719ba86fb45efc41b0bbb14759`, ARM macOS with HEIF. Defold patch.30 (many-to-many source `15eac21a6d`); patch.31 carries the identical binding code plus CI/download and migration fixes.
