@@ -1130,6 +1130,9 @@ impl Default for AiPanelState {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct UiState {
+    /// Transient native updater status and rendered button bounds for automation.
+    #[serde(skip)]
+    pub patch_update: Option<serde_json::Value>,
     #[serde(default)]
     pub defold: crate::defold_ui::GuiUiState,
     pub tool: Tool,
@@ -1384,6 +1387,7 @@ impl Default for UiState {
             tool: Tool::Brush,
             ai: AiPanelState::default(),
             defold: Default::default(),
+            patch_update: None,
             group_tools: Vec::new(),
             spring: None,
             recent_files: Vec::new(),

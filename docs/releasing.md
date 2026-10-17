@@ -338,3 +338,7 @@ The outputs are committed, so packaging never needs those tools.
 workflows or the icons. It runs actionlint, shellcheck, a PowerShell parse, xmllint,
 `desktop-file-validate`, `appstreamcli validate`, and a YAML check that the two Flatpak
 manifests agree on the runtime and permissions.
+
+## Fork incremental updates
+
+The `ai-p0` fork includes a native macOS patch updater. See [the patch release guide](../patch/README.md) for revision bumps, exact signed baselines, immutable file-delta packages, feed publication and recovery.

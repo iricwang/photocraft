@@ -36,9 +36,9 @@ mod appearance;
 #[cfg(target_os = "macos")]
 mod apple_events;
 mod caps_lock;
+mod caption_style;
 mod codex_desktop;
 mod codex_shared;
-mod caption_style;
 mod control_server;
 mod crash_guard;
 mod cursor;
@@ -50,6 +50,7 @@ mod icon_theme;
 mod mac_menu;
 #[cfg(target_os = "macos")]
 mod mac_window;
+mod patch_update;
 // Pure logic is tested on every platform; only Linux runs the check.
 mod ai_asset_agent;
 mod ai_generation;
@@ -629,6 +630,9 @@ fn main() -> eframe::Result {
             // recovery-dialog choice may persist it (#3483).
             let remember = gpu_startup::backend_to_remember(&plan);
             app.on_started(move |app| {
+                if let Err(error) = photocraft_updater::acknowledge_startup() {
+                    log::warn!("Patch startup confirmation: {error}");
+                }
                 if let Some(s) = started_sentinel.lock().unwrap_or_else(std::sync::PoisonError::into_inner).take() {
                     s.finish();
                 }
@@ -697,7 +701,7 @@ fn main() -> eframe::Result {
             if let Some(w) = &app_dirs::current().warning {
                 photocraft_ui_egui::notices::post(&mut app, "Portable mode is off", vec![w.clone()], false, None);
             }
-            Ok(Box::new(app))
+            Ok(Box::new(patch_update::PatchApp::new(app)))
         }),
     );
     // The window is gone: refuse further files and free the lock, so a launch that is waiting (or

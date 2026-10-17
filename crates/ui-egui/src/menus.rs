@@ -355,6 +355,11 @@ pub(crate) fn invoke_unguarded(app: &mut PhotocraftApp, ctx: &egui::Context, id:
             app.ui.palette_open = !app.ui.palette_open;
             Ok(Value::Null)
         }
+        "help.checkUpdates" => {
+            let open = app.services.check_updates.as_mut().ok_or("Patch updates require the desktop app")?;
+            open();
+            Ok(json!({"opened": true}))
+        }
         "help.about" => Ok(json!({"dialog": app.ui.open_dialog(DialogKind::About, Default::default())})),
         "help.systemInfo" => {
             let mut fields = serde_json::Map::new();
@@ -719,6 +724,7 @@ pub fn is_enabled(app: &PhotocraftApp, id: &str) -> bool {
     match id {
         "window.panel.activate" | "window.panel.layout" | "window.panel.aiSettings" | "window.panel.defoldProperties" | "window.panel.defoldSync" => true,
         "window.panel.group" | "window.panel.move" | "window.panel.float" | "window.panel.dock" | "window.panel.close" => !app.session.prefs().workspace_locked,
+        "help.checkUpdates" => app.services.check_updates.is_some(),
         "file.open" | "file.exit" | "file.clearRecent" | "file.removeRecent" | "help.about" | "help.systemInfo" | "edit.search" => true,
         i if i.starts_with("file.openRecent.") => true,
         i if i.starts_with(DOCUMENT_ITEM) => true,

@@ -1412,6 +1412,7 @@ pub fn inspect(app: &PhotocraftApp, ctx: &egui::Context) -> Value {
         "view": app.ui.view,
         "views": app.ui.views,
         "dialogs": dialogs,
+        "patchUpdate": app.ui.patch_update,
         "windows": app.ui.windows,
         "theme": app.ui.theme,
         "status": app.ui.status,

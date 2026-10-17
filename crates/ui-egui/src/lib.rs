@@ -550,6 +550,8 @@ pub struct Services {
     /// while AppKit's run loop is still going crashes or hangs Touch Bar Macs (#1575, #1458).
     /// Without one, eframe closes the window and the app ends with it.
     pub quit: Option<QuitFn>,
+    /// Opens the native desktop patch updater; absent in the browser.
+    pub check_updates: Option<Box<dyn FnMut()>>,
 }
 
 /// A document histogram being computed off the UI thread: (document, revision, receiver of

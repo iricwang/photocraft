@@ -4737,6 +4737,7 @@ dependencies = [
  "photocraft-raster",
  "photocraft-tablet",
  "photocraft-ui-egui",
+ "photocraft-updater",
  "reqwest 0.12.28",
  "resvg",
  "rfd",
@@ -5165,6 +5166,18 @@ dependencies = [
  "toml",
  "unicode-bidi",
  "winsafe",
+]
+
+[[package]]
+name = "photocraft-updater"
+version = "0.9.0"
+dependencies = [
+ "flate2",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
 ]
 
 [[package]]
@@ -5917,6 +5930,7 @@ checksum = "eddd3ca559203180a307f12d114c268abf583f59b03cb906fd0b3ff8646c1147"
 dependencies = [
  "base64 0.22.1",
  "bytes",
+ "futures-channel",
  "futures-core",
  "futures-util",
  "http",

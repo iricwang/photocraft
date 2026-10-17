@@ -1,0 +1,6 @@
+{
+  "channel": "ai-p0",
+  "notes": "Publish native patch updates with verified GitHub download, installation and restart",
+  "revision": 3,
+  "schema": 1
+}
