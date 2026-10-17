@@ -131,3 +131,9 @@ Document synchronization routes by the document's original project root, even wh
 Renewing one session invalidates only its old token. Disconnecting or losing one project leaves other connections usable, and health checks cycle through all known endpoints. Reconnection to an already known project preserves dirty documents from other projects. Full many-to-many operation requires updated versions of both PhotoCraft and Defold. First-time connection handshakes are serialized; established sessions remain usable while another peer is being added.
 
 Native multi-binding regression and exact patch upgrade evidence: [2026-10-17 acceptance](defold-multi-binding-validation/README.md).
+
+### Explicit disconnect and background reconnection
+
+Patch.6 distinguishes an explicit disconnect from a temporarily unreachable editor. Disconnecting either end suppresses that editor address from PhotoCraft automatic discovery for the rest of this application session, including the default local address. Use Bind Defold (or initiate binding in Defold) to connect it again; a successful explicit handshake clears the suppression. Temporary network failures continue to retry known addresses. Restarting PhotoCraft begins a new discovery session.
+
+Releasing one endpoint invalidates only its outstanding metadata/refresh/handshake work, drops its queued opens and cancels its pending replacement. Late results cannot restore its old credentials. Work and credentials for other endpoints remain valid.

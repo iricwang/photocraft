@@ -19,6 +19,8 @@ pub struct BindingUi {
     #[cfg(not(target_arch = "wasm32"))]
     ready: Option<Peer>,
     #[cfg(not(target_arch = "wasm32"))]
+    operation: Option<(String, u64)>,
+    #[cfg(not(target_arch = "wasm32"))]
     auto_at: Option<f64>,
     #[cfg(not(target_arch = "wasm32"))]
     auto_attempt: bool,
@@ -37,26 +39,83 @@ enum Event {
     Connected(Peer),
     Bound(Peer),
     Mirrored(Peer),
+    Cancelled,
 }
 #[cfg(not(target_arch = "wasm32"))]
-fn worker(ui: &mut BindingUi, ctx: &egui::Context, run: impl FnOnce() -> link_result::Result<Event> + Send + 'static) {
-    link::state().working = true;
+fn worker(
+    ui: &mut BindingUi,
+    ctx: &egui::Context,
+    address: String,
+    expected_epoch: Option<u64>,
+    run: impl FnOnce(u64) -> link_result::Result<Event> + Send + 'static,
+) -> bool {
+    let epoch = {
+        let mut state = link::state();
+        let epoch = state.epoch(&address);
+        if expected_epoch.is_some_and(|expected| expected != epoch) {
+            state.working = false;
+            state.frozen = false;
+            ui.operation = None;
+            return false;
+        }
+        state.working = true;
+        epoch
+    };
+    ui.operation = Some((address.clone(), epoch));
     let (tx, rx) = channel();
     let ctx = ctx.clone();
     std::thread::spawn(move || {
-        let _ = tx.send(run().map_err(|e| e.to_string()));
+        let result = ensure_current(&address, epoch).and_then(|()| run(epoch));
+        let result = if ensure_current(&address, epoch).is_err() {
+            if let Ok(event) = result {
+                cancel_event(event);
+            }
+            Ok(Event::Cancelled)
+        } else {
+            result
+        };
+        let _ = tx.send(result.map_err(|e| e.to_string()));
         ctx.request_repaint();
     });
     ui.worker = Some(rx);
+    true
+}
+#[cfg(not(target_arch = "wasm32"))]
+fn ensure_current(address: &str, epoch: u64) -> link_result::Result<()> {
+    if link::state().epoch(address) != epoch {
+        return Err(photocraft_engine::EngineError::Other("Connection operation was cancelled".into()));
+    }
+    Ok(())
+}
+#[cfg(not(target_arch = "wasm32"))]
+fn cancel_event(event: Event) {
+    if let Event::Ready(peer) | Event::Bound(peer) | Event::Mirrored(peer) | Event::Connected(peer) = event {
+        cancel_peer(&peer);
+    }
+}
+#[cfg(not(target_arch = "wasm32"))]
+fn cancel_peer(peer: &Peer) {
+    {
+        let mut state = link::state();
+        if state.outgoing_peer.as_ref().is_some_and(|pending| pending.token == peer.token) {
+            state.outgoing_peer = None;
+        }
+    }
+    let _ = native::json_request(&peer.address, "/binding/cancel", &peer.token, &json!({}));
+    let _ = native::json_request(&peer.address, "/binding/release", &peer.token, &json!({}));
 }
 #[cfg(not(target_arch = "wasm32"))]
 mod link_result {
     pub type Result<T> = photocraft_engine::Result<T>;
 }
 #[cfg(not(target_arch = "wasm32"))]
-fn request(target: String, automatic: bool) -> link_result::Result<Event> {
+fn request(target: String, automatic: bool, epoch: u64) -> link_result::Result<Event> {
+    ensure_current(&target, epoch)?;
     let (id, port) = {
         let s = link::state();
+        if automatic && s.disconnected.contains(&target) {
+            return Ok(Event::Quiet);
+        }
         (s.id.clone(), s.port)
     };
     let status = native::json_request(&target, "/binding/status", "", &json!({}))?;
@@ -74,20 +133,34 @@ fn request(target: String, automatic: bool) -> link_result::Result<Event> {
     let reply = native::json_request(&target, "/binding/request", "", &json!({"id":id,"address":native::own_address(&target,port)?}))?;
     let token = reply["ticket"].as_str().ok_or_else(|| photocraft_engine::EngineError::Other("No binding ticket".into()))?.to_owned();
     let mut peer = Peer { id: reply["id"].as_str().unwrap_or("").into(), address: target, token, project: String::new(), root: String::new() };
-    let deadline = Instant::now() + Duration::from_secs(170);
-    while Instant::now() < deadline {
-        let result = native::json_request(&peer.address, "/binding/result", &peer.token, &json!({}))?;
-        if result["phase"] == "ready" {
-            native::resolve_project(&mut peer)?;
-            return Ok(Event::Ready(peer));
+    let result = (|| {
+        {
+            let mut state = link::state();
+            if state.epoch(&peer.address) != epoch {
+                return Err(photocraft_engine::EngineError::Other("Connection operation was cancelled".into()));
+            }
+            state.outgoing_peer = Some(peer.clone());
         }
-        if result["phase"] == "rejected" {
-            break;
+        let deadline = Instant::now() + Duration::from_secs(170);
+        while Instant::now() < deadline {
+            ensure_current(&peer.address, epoch)?;
+            let result = native::json_request(&peer.address, "/binding/result", &peer.token, &json!({}))?;
+            if result["phase"] == "ready" {
+                native::resolve_project(&mut peer)?;
+                ensure_current(&peer.address, epoch)?;
+                return Ok(Event::Ready(peer.clone()));
+            }
+            if result["phase"] == "rejected" {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(300));
         }
-        std::thread::sleep(Duration::from_millis(300));
+        Err(photocraft_engine::EngineError::Other("Binding was cancelled or timed out".into()))
+    })();
+    if result.is_err() {
+        cancel_peer(&peer);
     }
-    let _ = native::json_request(&peer.address, "/binding/cancel", &peer.token, &json!({}));
-    Err(photocraft_engine::EngineError::Other("Binding was cancelled or timed out".into()))
+    result
 }
 #[cfg(not(target_arch = "wasm32"))]
 fn different_project(app: &PhotocraftApp, peer: &Peer) -> bool {
@@ -111,30 +184,71 @@ fn incoming_needs_consent(peer: &Peer, known: Option<&Peer>) -> bool {
 #[cfg(not(target_arch = "wasm32"))]
 fn commit(peer: Peer, ui: &mut BindingUi, ctx: &egui::Context) {
     ui.ready = None;
-    worker(ui, ctx, move || {
+    let expected_epoch = ui.operation.as_ref().filter(|(address, _)| address == &peer.address).map(|(_, epoch)| *epoch);
+    let cancelled = peer.clone();
+    if !worker(ui, ctx, peer.address.clone(), expected_epoch, move |epoch| {
         let mut peer = peer;
-        let _ = native::json_request(&peer.address, "/binding/commit", &peer.token, &json!({}));
-        let deadline = Instant::now() + Duration::from_secs(15);
-        loop {
-            let v = native::json_request(&peer.address, "/binding/committed", &peer.token, &json!({}))?;
-            if v["phase"] == "bound" {
-                break;
+        let result = (|| {
+            ensure_current(&peer.address, epoch)?;
+            let _ = native::json_request(&peer.address, "/binding/commit", &peer.token, &json!({}));
+            let deadline = Instant::now() + Duration::from_secs(15);
+            loop {
+                ensure_current(&peer.address, epoch)?;
+                let v = native::json_request(&peer.address, "/binding/committed", &peer.token, &json!({}))?;
+                if v["phase"] == "bound" {
+                    break;
+                }
+                if Instant::now() > deadline {
+                    return Err(photocraft_engine::EngineError::Other("Binding commit timed out".into()));
+                }
+                std::thread::sleep(Duration::from_millis(100));
             }
-            if Instant::now() > deadline {
-                return Err(photocraft_engine::EngineError::Other("Binding commit timed out".into()));
-            }
-            std::thread::sleep(Duration::from_millis(100));
+            native::prepare_project(&mut peer)?;
+            Ok(Event::Bound(peer.clone()))
+        })();
+        if result.is_err() {
+            cancel_peer(&peer);
         }
-        native::prepare_project(&mut peer)?;
-        Ok(Event::Bound(peer))
-    });
+        result
+    }) {
+        std::thread::spawn(move || cancel_peer(&cancelled));
+    }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn tick(app: &mut PhotocraftApp, ctx: &egui::Context) {
     let mut ui = std::mem::take(&mut app.peer_binding);
+    if ui.operation.as_ref().is_some_and(|(address, epoch)| ensure_current(address, *epoch).is_err()) {
+        if let Some(rx) = ui.worker.take()
+            && let Ok(Ok(event)) = rx.try_recv()
+        {
+            std::thread::spawn(move || cancel_event(event));
+        }
+        ui.ready = None;
+        ui.operation = None;
+        ui.auto_attempt = false;
+        let mut state = link::state();
+        state.working = false;
+        state.frozen = false;
+    }
     if let Some(rx) = &ui.worker {
         match rx.try_recv() {
+            Ok(Ok(Event::Cancelled)) => {
+                ui.worker = None;
+                ui.ready = None;
+                ui.operation = None;
+                ui.auto_attempt = false;
+                let mut state = link::state();
+                state.working = false;
+                state.frozen = false;
+            }
+            Ok(Ok(Event::Mirrored(peer))) if link::state().peer_for_token(&peer.token).is_none() => {
+                ui.worker = None;
+                ui.operation = None;
+                let mut state = link::state();
+                state.working = false;
+                state.frozen = false;
+            }
             Ok(Ok(Event::Connected(peer))) => {
                 ui.worker = None;
                 ui.auto_attempt = false;
@@ -198,12 +312,21 @@ pub fn tick(app: &mut PhotocraftApp, ctx: &egui::Context) {
                 if ui.resource.is_empty() || !ui.resources.contains(&ui.resource) {
                     ui.resource = ui.resources.first().cloned().unwrap_or_default();
                 }
-                native::replace(peer);
+                let epoch = ui.operation.as_ref().filter(|(address, _)| address == &peer.address).map(|(_, epoch)| *epoch);
+                let accepted = epoch.is_some_and(|epoch| native::replace(peer.clone(), epoch));
+                if !accepted {
+                    ui.resources.clear();
+                    ui.resource.clear();
+                    let mut state = link::state();
+                    state.refresh = state.active.is_some();
+                    drop(state);
+                    std::thread::spawn(move || cancel_peer(&peer));
+                }
                 link::state().working = false;
                 link::state().frozen = false;
                 ui.worker = None;
                 ui.ready = None;
-                app.ui.status = tl!("Defold bound; project resources are ready").into();
+                app.ui.status = if accepted { tl!("Defold bound; project resources are ready") } else { tl!("Disconnected") }.into();
             }
             Ok(Err(e)) => {
                 if ui.auto_attempt
@@ -239,11 +362,9 @@ pub fn tick(app: &mut PhotocraftApp, ctx: &egui::Context) {
             let mut s = link::state();
             if s.incoming.is_none() && s.outgoing.is_none() && !s.working {
                 ui.auto_attempt = true;
-                let mut addresses: Vec<_> = s.connections().into_iter().map(|peer| peer.address.clone()).collect();
-                addresses.push(format!("127.0.0.1:{}", link::DEFOLD_PORT));
-                addresses.sort();
-                addresses.dedup();
-                s.outgoing = addresses.get(ui.auto_cursor % addresses.len()).cloned();
+                let addresses = s.automatic_targets(&format!("127.0.0.1:{}", link::DEFOLD_PORT));
+                s.outgoing = if addresses.is_empty() { None } else { addresses.get(ui.auto_cursor % addresses.len()).cloned() };
+                ui.auto_attempt = s.outgoing.is_some();
                 ui.auto_cursor = ui.auto_cursor.wrapping_add(1);
             }
         }
@@ -253,7 +374,7 @@ pub fn tick(app: &mut PhotocraftApp, ctx: &egui::Context) {
         if let Some(target) = target {
             let automatic = ui.auto_attempt;
             ui.attempt_address = Some(target.clone());
-            worker(&mut ui, ctx, move || request(target, automatic));
+            worker(&mut ui, ctx, target.clone(), None, move |epoch| request(target, automatic, epoch));
         }
     }
     let incoming = {
@@ -264,12 +385,12 @@ pub fn tick(app: &mut PhotocraftApp, ctx: &egui::Context) {
         s.incoming.clone()
     };
     if let Some(offer) = &incoming {
-        if offer.phase == "commit" {
+        if offer.phase == "commit" && ui.worker.is_none() && ui.ready.is_none() {
             let Ok(mut peer) = native::accept_commit(&offer.ticket) else {
                 app.peer_binding = ui;
                 return;
             };
-            worker(&mut ui, ctx, move || {
+            worker(&mut ui, ctx, peer.address.clone(), None, move |_| {
                 native::prepare_project(&mut peer)?;
                 Ok(Event::Mirrored(peer))
             });
@@ -277,7 +398,7 @@ pub fn tick(app: &mut PhotocraftApp, ctx: &egui::Context) {
             // Metadata is authenticated with the pending ticket before project identity is used.
             let mut peer = offer.peer.clone();
             if peer.root.is_empty() {
-                worker(&mut ui, ctx, move || {
+                worker(&mut ui, ctx, peer.address.clone(), None, move |_| {
                     native::resolve_project(&mut peer)?;
                     Ok(Event::Ready(peer))
                 });
@@ -316,6 +437,13 @@ pub fn tick(app: &mut PhotocraftApp, ctx: &egui::Context) {
             }
         } else if cancelled {
             ui.ready = None;
+            ui.operation = None;
+            {
+                let mut state = link::state();
+                if state.outgoing_peer.as_ref().is_some_and(|pending| pending.token == peer.token) {
+                    state.outgoing_peer = None;
+                }
+            }
             if incoming_ticket.is_some() {
                 link::state().incoming = None;
             } else {
@@ -329,11 +457,15 @@ pub fn tick(app: &mut PhotocraftApp, ctx: &egui::Context) {
     if link::state().port > 0 || ui.worker.is_some() || incoming.is_some() {
         ctx.request_repaint_after(Duration::from_millis(100));
     }
-    if ui.worker.is_none() && link::state().refresh {
+    let refresh_ready = {
+        let state = link::state();
+        state.refresh && state.incoming.is_none()
+    };
+    if ui.worker.is_none() && ui.ready.is_none() && refresh_ready {
         link::state().refresh = false;
         let peer = { link::state().active.clone() };
         if let Some(mut peer) = peer {
-            worker(&mut ui, ctx, move || {
+            worker(&mut ui, ctx, peer.address.clone(), None, move |_| {
                 native::mirror(&mut peer)?;
                 Ok(Event::Mirrored(peer))
             });
@@ -379,7 +511,8 @@ pub fn panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
             ui.label(project);
         }
     } else {
-        ui.label(tl!("Not bound; trying the local Defold editor"));
+        let paused = link::state().disconnected.contains(&format!("127.0.0.1:{}", link::DEFOLD_PORT));
+        ui.label(if paused { tl!("Disconnected") } else { tl!("Not bound; trying the local Defold editor") });
     }
     ui.label(tl!("Defold IP address"));
     if app.peer_binding.address.is_empty() {
@@ -430,6 +563,8 @@ pub fn panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
         } else {
             app.peer_binding.resource.clear();
             app.peer_binding.resources.clear();
+            app.ui.status = tl!("Disconnected").into();
+            app.ui.status_error = false;
             let refresh = link::inspect()["peer"].is_object();
             link::state().refresh = refresh;
         }
@@ -545,7 +680,7 @@ mod tests {
                 stream.write_all(&bytes).unwrap();
             }
         });
-        let result = request(target, true);
+        let result = request(target, true, 0);
         *link::state() = saved;
         server.join().unwrap();
         assert!(matches!(result, Ok(Event::Ready(peer)) if peer.token == "renewed-ticket" && peer.id == "restarted-editor"));
@@ -643,5 +778,143 @@ mod tests {
         assert!(app.session.documents()[0].is_dirty());
         assert_eq!(app.session.documents().len(), 1);
         *link::state() = saved;
+    }
+
+    // Review reproduction: a refresh that finishes after release must not restore its revoked session.
+    #[test]
+    fn revoked_refresh_must_not_resurrect_connection() {
+        let _serial = SERIAL.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        let saved = std::mem::take(&mut *link::state());
+        let root = tempfile::tempdir().unwrap();
+        let mut revoked = peer("revoked");
+        revoked.address = "127.0.0.1:29001".into();
+        revoked.root = root.path().to_string_lossy().into_owned();
+        revoked.project = revoked.root.clone();
+        let mut other = peer("other");
+        other.address = "127.0.0.1:29002".into();
+        other.root = revoked.root.clone();
+        other.project = revoked.project.clone();
+        link::state().put(revoked.clone());
+        link::state().put(other.clone());
+        let (tx, rx) = channel();
+        let mut app = PhotocraftApp::new(Session::new(), Services::default());
+        app.peer_binding.worker = Some(rx);
+        link::state().working = true;
+        // The authenticated /binding/release route calls this exact transition while a mirror runs.
+        link::state().remove_token(&revoked.token);
+        tx.send(Ok(Event::Mirrored(revoked.clone()))).unwrap();
+        frame(&mut app, &egui::Context::default());
+        let resurrected = link::state().peer_for_token(&revoked.token).is_some();
+        let other_survived = link::state().peer_for_token(&other.token).is_some();
+        *link::state() = saved;
+        assert!(other_survived, "the unrelated connection must remain usable");
+        assert!(!resurrected, "late mirror completion resurrected a released session and its revoked token");
+    }
+
+    // Review reproduction: releasing a peer must cancel an already prepared replacement for that endpoint.
+    #[test]
+    fn release_must_cancel_same_endpoint_pending_commit() {
+        let mut state = Binding::default();
+        let old = peer("old");
+        state.put(old.clone());
+        let mut other = peer("other");
+        other.address = "127.0.0.1:29002".into();
+        state.put(other.clone());
+        state.incoming = Some(Offer {
+            ticket: "replacement-ticket".into(),
+            peer: Peer { token: "replacement-ticket".into(), ..old.clone() },
+            phase: "ready".into(),
+            expires: Instant::now() + Duration::from_secs(180),
+        });
+        state.remove_token(&old.token);
+        assert!(state.peer_for_token(&other.token).is_some());
+        assert!(state.incoming.is_none(), "a pending commit at the disconnected endpoint can still recreate the connection");
+    }
+
+    // A released endpoint invalidates every local completion stage, without cancelling the other endpoint.
+    #[test]
+    fn released_operation_discards_ready_bound_and_mirrored_events() {
+        let _serial = SERIAL.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        let saved = std::mem::take(&mut *link::state());
+        for event_kind in 0..3 {
+            let mut state = link::state();
+            *state = Binding::default();
+            let mut old = peer("old");
+            old.address = "127.0.0.1:29001".into();
+            let mut other = peer("other");
+            other.address = "127.0.0.1:29002".into();
+            state.put(old.clone());
+            state.put(other.clone());
+            let epoch = state.epoch(&old.address);
+            let (tx, rx) = channel();
+            let mut app = PhotocraftApp::new(Session::new(), Services::default());
+            app.peer_binding.worker = Some(rx);
+            app.peer_binding.operation = Some((old.address.clone(), epoch));
+            state.working = true;
+            state.remove_token(&old.token);
+            drop(state);
+            // UI-thread cancellation drains a completed channel before applying any event.
+            let event = match event_kind {
+                0 => Event::Ready(old.clone()),
+                1 => Event::Bound(old.clone()),
+                _ => Event::Mirrored(old.clone()),
+            };
+            tx.send(Ok(event)).unwrap();
+            frame(&mut app, &egui::Context::default());
+            assert!(app.peer_binding.ready.is_none());
+            assert!(app.peer_binding.worker.is_none());
+            assert!(link::state().peer_for_token(&old.token).is_none());
+            assert!(link::state().peer_for_token(&other.token).is_some());
+            assert!(!link::state().working);
+        }
+        *link::state() = saved;
+    }
+
+    // Removing the last/default peer must leave automatic discovery idle, including the empty-target case.
+    #[test]
+    fn manually_disconnected_default_does_not_restart_discovery() {
+        let _serial = SERIAL.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        let saved = std::mem::take(&mut *link::state());
+        let old = peer("old");
+        link::state().put(old.clone());
+        link::state().remove_token(&old.token);
+        link::state().port = 19199;
+        let mut app = PhotocraftApp::new(Session::new(), Services::default());
+        app.peer_binding.auto_at = Some(0.0);
+        frame(&mut app, &egui::Context::default());
+        let idle = app.peer_binding.worker.is_none() && link::state().outgoing.is_none() && !link::state().working && !app.peer_binding.auto_attempt;
+        *link::state() = saved;
+        assert!(idle, "manual disconnect must suppress the default candidate until an explicit binding succeeds");
+    }
+    // An epoch checked earlier in the callback cannot authorize the final mutation after release.
+    #[test]
+    fn final_connection_commit_rechecks_epoch_atomically() {
+        let _serial = SERIAL.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        let saved = std::mem::take(&mut *link::state());
+        let old = peer("old");
+        link::state().put(old.clone());
+        let epoch = link::state().epoch(&old.address);
+        assert!(ensure_current(&old.address, epoch).is_ok());
+        link::state().remove_token(&old.token);
+        let accepted = native::replace(old.clone(), epoch);
+        let revived = link::state().peer_for_token(&old.token).is_some();
+        *link::state() = saved;
+        assert!(!accepted);
+        assert!(!revived);
+    }
+    // A continuation must not acquire a fresh epoch after its original operation was cancelled.
+    #[test]
+    fn cancelled_handshake_cannot_restart_with_the_new_epoch() {
+        let _serial = SERIAL.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        let saved = std::mem::take(&mut *link::state());
+        let old = peer("old");
+        link::state().put(old.clone());
+        let epoch = link::state().epoch(&old.address);
+        link::state().remove_token(&old.token);
+        let mut ui = BindingUi::default();
+        let started = worker(&mut ui, &egui::Context::default(), old.address, Some(epoch), |_| panic!("cancelled continuation must not execute"));
+        *link::state() = saved;
+        assert!(!started);
+        assert!(ui.worker.is_none());
     }
 }

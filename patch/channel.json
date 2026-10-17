@@ -1,6 +1,6 @@
 {
   "channel": "ai-p0",
-  "notes": "Many-to-many Defold bindings with scoped sessions, native connection selection, compact sync controls and verified release regressions",
-  "revision": 5,
+  "notes": "Keep explicit disconnects offline and discard cancelled connection work without affecting other projects",
+  "revision": 6,
   "schema": 1
 }

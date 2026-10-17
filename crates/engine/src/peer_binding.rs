@@ -32,12 +32,15 @@ pub struct Offer {
 pub struct Binding {
     pub peers: BTreeMap<String, Peer>,
     pub offline: BTreeSet<String>,
+    pub disconnected: BTreeSet<String>,
+    epochs: BTreeMap<String, u64>,
     pub id: String,
     pub port: u16,
     pub active: Option<Peer>,
     pub connected: bool,
     pub incoming: Option<Offer>,
     pub outgoing: Option<String>,
+    pub outgoing_peer: Option<Peer>,
     pub working: bool,
     pub frozen: bool,
     pub refresh: bool,
@@ -45,6 +48,18 @@ pub struct Binding {
     pub error: Option<String>,
 }
 impl Binding {
+    /// A release invalidates only work started for this endpoint.
+    pub fn epoch(&self, address: &str) -> u64 {
+        self.epochs.get(address).copied().unwrap_or(0)
+    }
+    pub fn automatic_targets(&self, discovery: &str) -> Vec<String> {
+        let mut targets: Vec<_> = self.connections().into_iter().map(|peer| peer.address.clone()).collect();
+        targets.push(discovery.into());
+        targets.retain(|address| !self.disconnected.contains(address));
+        targets.sort();
+        targets.dedup();
+        targets
+    }
     pub fn for_root(&self, root: &str) -> Result<Option<Peer>> {
         let candidates: Vec<_> = self.connections().into_iter().filter(|p| self.connected_to(p) && same_project(&p.root, root)).collect();
         if let Some(peer) = self.active.as_ref().filter(|p| self.connected_to(p) && same_project(&p.root, root)) {
@@ -89,6 +104,10 @@ impl Binding {
             self.offline.remove(&id);
         }
         self.offline.remove(&peer.id);
+        self.disconnected.remove(&peer.address);
+        if self.outgoing_peer.as_ref().is_some_and(|pending| pending.token == peer.token) {
+            self.outgoing_peer = None;
+        }
         self.peers.insert(peer.id.clone(), peer.clone());
         self.active = Some(peer);
         self.connected = true;
@@ -104,13 +123,36 @@ impl Binding {
         Ok(())
     }
     pub fn remove_token(&mut self, token: &str) -> Option<Peer> {
-        let peer = self.peer_for_token(token)?.clone();
-        self.peers.remove(&peer.id);
-        self.offline.remove(&peer.id);
-        self.opens.retain(|(queued, _)| queued.token != token);
-        if self.active.as_ref().is_some_and(|p| p.token == token) {
+        if token.is_empty() {
+            return None;
+        }
+        let peer = self
+            .peer_for_token(token)
+            .or_else(|| self.outgoing_peer.as_ref().filter(|peer| peer.token == token))
+            .or_else(|| self.incoming.as_ref().filter(|offer| offer.ticket == token).map(|offer| &offer.peer))?
+            .clone();
+        let ids: Vec<_> = self.peers.values().filter(|known| known.address == peer.address).map(|known| known.id.clone()).collect();
+        for id in ids {
+            self.peers.remove(&id);
+            self.offline.remove(&id);
+        }
+        self.disconnected.insert(peer.address.clone());
+        let epoch = self.epoch(&peer.address).wrapping_add(1);
+        self.epochs.insert(peer.address.clone(), epoch);
+        if self.incoming.as_ref().is_some_and(|offer| offer.peer.address == peer.address) {
+            self.incoming = None;
+        }
+        if self.outgoing.as_ref() == Some(&peer.address) {
+            self.outgoing = None;
+        }
+        if self.outgoing_peer.as_ref().is_some_and(|pending| pending.address == peer.address) {
+            self.outgoing_peer = None;
+        }
+        self.opens.retain(|(queued, _)| queued.address != peer.address);
+        if self.active.as_ref().is_some_and(|p| p.address == peer.address) {
             self.active = self.peers.values().next().cloned();
             self.connected = self.active.as_ref().is_some_and(|p| !self.offline.contains(&p.id));
+            self.refresh = self.active.is_some();
         }
         Some(peer)
     }
@@ -630,8 +672,13 @@ pub mod native {
         s.incoming = None;
         Ok(peer)
     }
-    pub fn replace(peer: Peer) {
-        state().put(peer);
+    pub fn replace(peer: Peer, epoch: u64) -> bool {
+        let mut state = state();
+        if state.epoch(&peer.address) != epoch {
+            return false;
+        }
+        state.put(peer);
+        true
     }
     pub fn upload(root: &str, files: &[(String, Vec<u8>)]) -> Result<()> {
         use base64::Engine;
@@ -654,6 +701,82 @@ pub mod native {
 #[cfg(test)]
 mod tests {
     use super::*;
+    // Pending replacement credentials revoke the whole endpoint, including its previously selected identity.
+    #[test]
+    fn pending_release_removes_previous_identity_at_the_same_endpoint() {
+        let mut state = Binding::default();
+        let other = Peer { id: "other".into(), address: "127.0.0.1:29002".into(), token: "other".into(), project: "/b".into(), root: "/b".into() };
+        let old = Peer { id: "old".into(), address: "127.0.0.1:29001".into(), token: "old".into(), project: "/a".into(), root: "/a".into() };
+        state.put(other.clone());
+        state.put(old.clone());
+        state.outgoing_peer = Some(Peer { id: "new".into(), token: "pending".into(), ..old.clone() });
+        state.remove_token("pending");
+        assert!(state.peer_for_token("old").is_none());
+        assert!(state.peer_for_token("pending").is_none());
+        assert_eq!(state.connections().len(), 1);
+        assert_eq!(state.active.as_ref().unwrap().id, other.id);
+    }
+    // The editor can release a newly accepted outgoing ticket while the client is still preparing resources.
+    #[test]
+    fn outgoing_ticket_can_be_released_before_local_commit() {
+        let mut state = Binding::default();
+        let peer = Peer { id: "pending".into(), address: "127.0.0.1:29001".into(), token: "pending-ticket".into(), project: "/a".into(), root: "/a".into() };
+        state.outgoing_peer = Some(peer.clone());
+        assert!(state.peer_for_token(&peer.token).is_none(), "pending credentials cannot open resources");
+        assert!(state.remove_token(&peer.token).is_some());
+        assert!(state.outgoing_peer.is_none());
+        assert_eq!(state.epoch(&peer.address), 1);
+        assert!(!state.automatic_targets(&peer.address).contains(&peer.address));
+        state.put(Peer { token: "new-ticket".into(), ..peer.clone() });
+        assert!(state.remove_token(&peer.token).is_none());
+        assert!(state.peer_for_token("new-ticket").is_some());
+    }
+    // Manual disconnect is distinct from offline detection; explicit binding can opt that endpoint back in.
+    #[test]
+    fn manual_disconnect_suppresses_discovery_and_explicit_rebind_resets_it() {
+        let mut state = Binding::default();
+        let a = Peer { id: "a".into(), address: "127.0.0.1:17654".into(), token: "a-ticket".into(), project: "/a".into(), root: "/a".into() };
+        let b = Peer { id: "b".into(), address: "127.0.0.1:29002".into(), token: "b-ticket".into(), project: "/b".into(), root: "/b".into() };
+        state.put(a.clone());
+        state.put(b.clone());
+        state.mark_address(&a.address, false);
+        assert!(state.automatic_targets(&a.address).contains(&a.address));
+        state.remove_token(&a.token);
+        assert_eq!(state.epoch(&a.address), 1);
+        assert_eq!(state.epoch(&b.address), 0);
+        assert_eq!(state.automatic_targets(&a.address), vec![b.address.clone()]);
+        assert!(state.peer_for_token(&b.token).is_some());
+        state.put(Peer { token: "renewed-a".into(), ..a.clone() });
+        assert!(state.automatic_targets(&a.address).contains(&a.address));
+        state.remove_token(&a.token);
+        assert_eq!(state.epoch(&a.address), 1, "old release must not invalidate a newer binding");
+        assert!(state.peer_for_token("renewed-a").is_some());
+    }
+    // Release clears only that endpoint's pending transaction and queued opens.
+    #[test]
+    fn release_is_scoped_to_pending_endpoint_and_queued_credentials() {
+        let a = Peer { id: "a".into(), address: "127.0.0.1:29001".into(), token: "a".into(), project: "/a".into(), root: "/a".into() };
+        let b = Peer { id: "b".into(), address: "127.0.0.1:29002".into(), token: "b".into(), project: "/b".into(), root: "/b".into() };
+        for same_endpoint in [true, false] {
+            let mut state = Binding::default();
+            state.put(a.clone());
+            state.put(b.clone());
+            state.opens = vec![(a.clone(), "/a.gui".into()), (b.clone(), "/b.gui".into())];
+            state.incoming = Some(Offer {
+                ticket: "pending".into(),
+                peer: if same_endpoint { a.clone() } else { b.clone() },
+                phase: "ready".into(),
+                expires: Instant::now(),
+            });
+            state.outgoing = Some(if same_endpoint { a.address.clone() } else { b.address.clone() });
+            state.remove_token(&a.token);
+            assert_eq!(state.incoming.is_none(), same_endpoint);
+            assert_eq!(state.outgoing.is_none(), same_endpoint);
+            assert_eq!(state.opens.len(), 1);
+            assert_eq!(state.opens[0].0.id, "b");
+            assert_eq!(state.active.as_ref().unwrap().id, "b");
+        }
+    }
     #[test]
     fn connections_keep_independent_credentials_and_project_routing() {
         let mut s = Binding::default();
