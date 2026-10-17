@@ -4347,7 +4347,6 @@ navigator	Zoom	Zoom
 	Painted artwork is preserved	Painted artwork is preserved
 	No project differences	No project differences
 	Apply reviewed changes	Apply reviewed changes
-	PhotoCraft	PhotoCraft
 	Defold	Defold
 	Migration saved. Preserve this draft separately, then reopen the GUI to use the migrated source	Migration saved. Preserve this draft separately, then reopen the GUI to use the migrated source
 	Migration needs review; original files are preserved	Migration needs review; original files are preserved
@@ -4422,3 +4421,4 @@ navigator	Zoom	Zoom
 	{name} was changed by another app after it was opened or saved here.	Otra aplicación cambió {name} después de abrirlo o guardarlo aquí.
 	Replace it with this document, or cancel and use File › Save As to keep both.	Reemplázalo con este documento, o cancela y usa Archivo › Guardar como para conservar ambos.
 	Disconnect selected Defold	Desconectar Defold seleccionado
+	Check for Updates…	Buscar actualizaciones…

@@ -3390,7 +3390,6 @@ curves	Smooth	Glätten
 	Painted artwork is preserved	Painted artwork is preserved
 	No project differences	No project differences
 	Apply reviewed changes	Apply reviewed changes
-	PhotoCraft	PhotoCraft
 	Defold	Defold
 	Migration saved. Preserve this draft separately, then reopen the GUI to use the migrated source	Migration saved. Preserve this draft separately, then reopen the GUI to use the migrated source
 	Migration needs review; original files are preserved	Migration needs review; original files are preserved
@@ -3465,3 +3464,4 @@ curves	Smooth	Glätten
 	{name} was changed by another app after it was opened or saved here.	{name} wurde von einer anderen App geändert, nachdem es hier geöffnet oder gespeichert wurde.
 	Replace it with this document, or cancel and use File › Save As to keep both.	Ersetze die Datei durch dieses Dokument oder brich ab und nutze Datei › Speichern unter, um beide zu behalten.
 	Disconnect selected Defold	Ausgewähltes Defold trennen
+	Check for Updates…	Nach Updates suchen…

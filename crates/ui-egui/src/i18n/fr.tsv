@@ -3394,7 +3394,6 @@ curves	Smooth	Lisser
 	Painted artwork is preserved	Painted artwork is preserved
 	No project differences	No project differences
 	Apply reviewed changes	Apply reviewed changes
-	PhotoCraft	PhotoCraft
 	Defold	Defold
 	Migration saved. Preserve this draft separately, then reopen the GUI to use the migrated source	Migration saved. Preserve this draft separately, then reopen the GUI to use the migrated source
 	Migration needs review; original files are preserved	Migration needs review; original files are preserved
@@ -3470,3 +3469,4 @@ curves	Smooth	Lisser
 	{name} was changed by another app after it was opened or saved here.	{name} a été modifié par une autre application après avoir été ouvert ou enregistré ici.
 	Replace it with this document, or cancel and use File › Save As to keep both.	Remplacez-le par ce document, ou annulez et utilisez Fichier › Enregistrer sous pour garder les deux.
 	Disconnect selected Defold	Déconnecter le Defold sélectionné
+	Check for Updates…	Rechercher des mises à jour…

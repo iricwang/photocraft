@@ -3565,7 +3565,6 @@ curves	Smooth	매끄럽게
 	Painted artwork is preserved	Painted artwork is preserved
 	No project differences	No project differences
 	Apply reviewed changes	Apply reviewed changes
-	PhotoCraft	PhotoCraft
 	Defold	Defold
 	Migration saved. Preserve this draft separately, then reopen the GUI to use the migrated source	Migration saved. Preserve this draft separately, then reopen the GUI to use the migrated source
 	Migration needs review; original files are preserved	Migration needs review; original files are preserved
@@ -3641,3 +3640,4 @@ curves	Smooth	매끄럽게
 	{name} was changed by another app after it was opened or saved here.	{name}이(가) 여기서 열거나 저장한 뒤 다른 앱에서 변경되었습니다.
 	Replace it with this document, or cancel and use File › Save As to keep both.	이 문서로 대치하거나, 취소하고 파일 › 다른 이름으로 저장을 사용해 둘 다 보관하세요.
 	Disconnect selected Defold	선택한 Defold 연결 해제
+	Check for Updates…	업데이트 확인…

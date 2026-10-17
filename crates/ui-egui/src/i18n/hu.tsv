@@ -4306,7 +4306,6 @@ cameraRaw	Yellow	Sárga
 	Painted artwork is preserved	Painted artwork is preserved
 	No project differences	No project differences
 	Apply reviewed changes	Apply reviewed changes
-	PhotoCraft	PhotoCraft
 	Defold	Defold
 	Migration saved. Preserve this draft separately, then reopen the GUI to use the migrated source	Migration saved. Preserve this draft separately, then reopen the GUI to use the migrated source
 	Migration needs review; original files are preserved	Migration needs review; original files are preserved
@@ -4381,3 +4380,4 @@ cameraRaw	Yellow	Sárga
 	{name} was changed by another app after it was opened or saved here.	A(z) {name} fájlt egy másik alkalmazás módosította, miután itt megnyitották vagy mentették.
 	Replace it with this document, or cancel and use File › Save As to keep both.	Cserélje le erre a dokumentumra, vagy válassza a Mégse gombot, és a Fájl › Mentés másként paranccsal tartsa meg mindkettőt.
 	Disconnect selected Defold	Kijelölt Defold leválasztása
+	Check for Updates…	Frissítések keresése…

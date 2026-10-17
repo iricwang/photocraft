@@ -4086,7 +4086,6 @@ curves	Smooth	Згладити
 	Painted artwork is preserved	Painted artwork is preserved
 	No project differences	No project differences
 	Apply reviewed changes	Apply reviewed changes
-	PhotoCraft	PhotoCraft
 	Defold	Defold
 	Migration saved. Preserve this draft separately, then reopen the GUI to use the migrated source	Migration saved. Preserve this draft separately, then reopen the GUI to use the migrated source
 	Migration needs review; original files are preserved	Migration needs review; original files are preserved
@@ -4162,3 +4161,4 @@ curves	Smooth	Згладити
 	{name} was changed by another app after it was opened or saved here.	Файл {name} змінила інша програма після того, як його тут відкрили або зберегли.
 	Replace it with this document, or cancel and use File › Save As to keep both.	Замініть його цим документом або скасуйте й скористайтеся Файл › Зберегти як, щоб зберегти обидва.
 	Disconnect selected Defold	Від’єднати вибраний Defold
+	Check for Updates…	Перевірити оновлення…

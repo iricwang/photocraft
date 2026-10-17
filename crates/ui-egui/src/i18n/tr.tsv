@@ -4117,7 +4117,6 @@ cameraData	Lens	Lens
 	Painted artwork is preserved	Painted artwork is preserved
 	No project differences	No project differences
 	Apply reviewed changes	Apply reviewed changes
-	PhotoCraft	PhotoCraft
 	Defold	Defold
 	Migration saved. Preserve this draft separately, then reopen the GUI to use the migrated source	Migration saved. Preserve this draft separately, then reopen the GUI to use the migrated source
 	Migration needs review; original files are preserved	Migration needs review; original files are preserved
@@ -4192,3 +4191,4 @@ cameraData	Lens	Lens
 	{name} was changed by another app after it was opened or saved here.	{name}, burada açıldıktan veya kaydedildikten sonra başka bir uygulama tarafından değiştirildi.
 	Replace it with this document, or cancel and use File › Save As to keep both.	Bu belgeyle değiştirin ya da iptal edip ikisini de korumak için Dosya › Farklı Kaydet'i kullanın.
 	Disconnect selected Defold	Seçili Defold bağlantısını kes
+	Check for Updates…	Güncellemeleri denetle…

@@ -4145,7 +4145,6 @@ curves	Smooth	Vloeiend maken
 	Painted artwork is preserved	Painted artwork is preserved
 	No project differences	No project differences
 	Apply reviewed changes	Apply reviewed changes
-	PhotoCraft	PhotoCraft
 	Defold	Defold
 	Migration saved. Preserve this draft separately, then reopen the GUI to use the migrated source	Migration saved. Preserve this draft separately, then reopen the GUI to use the migrated source
 	Migration needs review; original files are preserved	Migration needs review; original files are preserved
@@ -4220,3 +4219,4 @@ curves	Smooth	Vloeiend maken
 	{name} was changed by another app after it was opened or saved here.	{name} is door een andere app gewijzigd nadat het hier is geopend of bewaard.
 	Replace it with this document, or cancel and use File › Save As to keep both.	Vervang het door dit document, of annuleer en gebruik Bestand › Opslaan als om beide te houden.
 	Disconnect selected Defold	Geselecteerde Defold loskoppelen
+	Check for Updates…	Controleren op updates…

@@ -4460,7 +4460,6 @@ shape	Appearance	Izgled
 	Painted artwork is preserved	Painted artwork is preserved
 	No project differences	No project differences
 	Apply reviewed changes	Apply reviewed changes
-	PhotoCraft	PhotoCraft
 	Defold	Defold
 	Migration saved. Preserve this draft separately, then reopen the GUI to use the migrated source	Migration saved. Preserve this draft separately, then reopen the GUI to use the migrated source
 	Migration needs review; original files are preserved	Migration needs review; original files are preserved
@@ -4535,3 +4534,4 @@ shape	Appearance	Izgled
 	{name} was changed by another app after it was opened or saved here.	Datoteku {name} je izmenila druga aplikacija nakon što je ovde otvorena ili sačuvana.
 	Replace it with this document, or cancel and use File › Save As to keep both.	Zameni je ovim dokumentom ili otkaži i koristi Datoteka › Sačuvaj kao da zadržiš obe.
 	Disconnect selected Defold	Prekini vezu sa izabranim Defoldom
+	Check for Updates…	Proveri ažuriranja…

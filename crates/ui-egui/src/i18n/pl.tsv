@@ -3985,7 +3985,6 @@ curves	Smooth	Wygładź
 	Painted artwork is preserved	Painted artwork is preserved
 	No project differences	No project differences
 	Apply reviewed changes	Apply reviewed changes
-	PhotoCraft	PhotoCraft
 	Defold	Defold
 	Migration saved. Preserve this draft separately, then reopen the GUI to use the migrated source	Migration saved. Preserve this draft separately, then reopen the GUI to use the migrated source
 	Migration needs review; original files are preserved	Migration needs review; original files are preserved
@@ -4061,3 +4060,4 @@ curves	Smooth	Wygładź
 	{name} was changed by another app after it was opened or saved here.	Plik {name} został zmieniony przez inną aplikację po otwarciu lub zapisaniu go tutaj.
 	Replace it with this document, or cancel and use File › Save As to keep both.	Zastąp go tym dokumentem albo anuluj i użyj Plik › Zapisz jako, aby zachować oba.
 	Disconnect selected Defold	Rozłącz wybrany Defold
+	Check for Updates…	Sprawdź aktualizacje…

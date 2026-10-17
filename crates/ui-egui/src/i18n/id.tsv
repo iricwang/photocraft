@@ -3381,7 +3381,6 @@ curves	Smooth	Haluskan
 	Painted artwork is preserved	Painted artwork is preserved
 	No project differences	No project differences
 	Apply reviewed changes	Apply reviewed changes
-	PhotoCraft	PhotoCraft
 	Defold	Defold
 	Migration saved. Preserve this draft separately, then reopen the GUI to use the migrated source	Migration saved. Preserve this draft separately, then reopen the GUI to use the migrated source
 	Migration needs review; original files are preserved	Migration needs review; original files are preserved
@@ -3457,3 +3456,4 @@ curves	Smooth	Haluskan
 	{name} was changed by another app after it was opened or saved here.	{name} diubah oleh aplikasi lain setelah dibuka atau disimpan di sini.
 	Replace it with this document, or cancel and use File › Save As to keep both.	Ganti dengan dokumen ini, atau batalkan dan gunakan Berkas › Simpan Sebagai untuk menyimpan keduanya.
 	Disconnect selected Defold	Putuskan Defold yang dipilih
+	Check for Updates…	Periksa Pembaruan…

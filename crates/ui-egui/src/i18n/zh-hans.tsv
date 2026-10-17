@@ -2984,18 +2984,18 @@ curves	Smooth	平滑
 	No publication has been recorded for this GUI	此 GUI 尚无发布记录
 	Publication was not confirmed	发布尚未确认
 	Publication cancelled; check its status before retrying	发布已取消；请先查询状态再重试
-	Publishing GUI and artwork...	正在发布 GUI 和图像…
+	Publishing GUI and artwork...	正在发布 GUI 和图像...
 	Creative source	创作源
 	Source has unsaved edits	创作源有未保存的修改
 	Creative source has not been saved to project	创作源尚未保存到工程
 	Save creative source	保存创作源
-	Saving creative source...	正在保存创作源…
+	Saving creative source...	正在保存创作源...
 	Saves the creative source, then publishes GUI and artwork	先保存创作源，再发布 GUI 和图像
 	New edits have not been published	新修改尚未发布
 	Publication details	发布详情
 	Check publication status	查询发布状态
 	Project connection	工程连接
-	Connect project host...	连接工程主机…
+	Connect project host...	连接工程主机...
 	Choose a project pairing file on this computer	选择此电脑上的工程配对文件
 	Project host connected	工程主机已连接
 	Open project GUI	打开工程 GUI
@@ -3005,7 +3005,7 @@ curves	Smooth	平滑
 	Cancel prepared publication	取消待发布事务
 	Reviewed changes applied; save or sync when ready	已应用复核结果，可继续保存或同步
 	Review cancelled; the creative source is unchanged	已取消复核，创作源保持不变
-	Checking project changes...	正在检查工程修改…
+	Checking project changes...	正在检查工程修改...
 	Review Defold changes	复核 Defold 修改
 	Compare both editors before accepting independent property changes	对照两边的修改，再接纳独立的属性变化
 	Check project changes	检查工程修改
@@ -3018,13 +3018,12 @@ curves	Smooth	平滑
 	Painted artwork is preserved	保留已绘制内容
 	No project differences	两边没有差异
 	Apply reviewed changes	应用复核结果
-	PhotoCraft	PhotoCraft
 	Defold	Defold
 	Migration saved. Preserve this draft separately, then reopen the GUI to use the migrated source	迁移已保存。请另存当前草稿，再重新打开 GUI 使用迁移后的源文件
 	Migration needs review; original files are preserved	迁移需要复核；原文件已保留
 	Project asset inventory updated	项目资产清单已更新
 	Asset inspection cancelled	已取消资产检查
-	Reading project asset inventory...	正在读取项目资产清单…
+	Reading project asset inventory...	正在读取项目资产清单...
 	Project assets and legacy sources	项目资产与旧版源文件
 	Refresh asset inventory	刷新资产清单
 	References are incomplete; retained resources will not be deleted	引用信息不完整；保留资源不会被删除
@@ -3037,7 +3036,7 @@ curves	Smooth	平滑
 	Request editing permission	申请编辑权限
 	Editing permission acquired; saving still checks the project version	已取得编辑权限；保存时仍会检查项目版本
 	Editing permission released	编辑权限已释放
-	Updating editing permission...	正在更新编辑权限…
+	Updating editing permission...	正在更新编辑权限...
 	Reveal in Defold	在 Defold 中打开资源
 	Resource opened in Defold	已在 Defold 中打开资源
 	Saved creative source	已保存的创作源
@@ -3095,3 +3094,4 @@ curves	Smooth	平滑
 	Replace it with this document, or cancel and use File › Save As to keep both.	用此文档替换它，或取消并使用“文件 › 另存为”以保留两者。
 
 	Disconnect selected Defold	断开所选 Defold 连接
+	Check for Updates…	检查更新…

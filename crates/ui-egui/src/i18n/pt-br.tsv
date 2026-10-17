@@ -4175,7 +4175,6 @@ layerLabel	No Color	Sem cor
 	Painted artwork is preserved	Painted artwork is preserved
 	No project differences	No project differences
 	Apply reviewed changes	Apply reviewed changes
-	PhotoCraft	PhotoCraft
 	Defold	Defold
 	Migration saved. Preserve this draft separately, then reopen the GUI to use the migrated source	Migration saved. Preserve this draft separately, then reopen the GUI to use the migrated source
 	Migration needs review; original files are preserved	Migration needs review; original files are preserved
@@ -4250,3 +4249,4 @@ layerLabel	No Color	Sem cor
 	{name} was changed by another app after it was opened or saved here.	{name} foi alterado por outro app depois de ser aberto ou salvo aqui.
 	Replace it with this document, or cancel and use File › Save As to keep both.	Substitua-o por este documento, ou cancele e use Arquivo › Salvar como para manter os dois.
 	Disconnect selected Defold	Desconectar Defold selecionado
+	Check for Updates…	Verificar atualizações…

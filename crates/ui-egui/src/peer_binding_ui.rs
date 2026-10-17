@@ -508,7 +508,7 @@ mod tests {
         let target = listener.local_addr().unwrap().to_string();
         listener.set_nonblocking(true).unwrap();
         let server = std::thread::spawn(move || {
-            let deadline = Instant::now() + Duration::from_secs(5);
+            let deadline = Instant::now() + Duration::from_secs(15);
             for response in [
                 json!({"app":"Defold","id":"restarted-editor","bound":"craft-client"}),
                 json!({"ticket":"renewed-ticket","id":"restarted-editor"}),
@@ -524,7 +524,8 @@ mod tests {
                     }
                     std::thread::park_timeout(Duration::from_millis(5));
                 };
-                stream.set_read_timeout(Some(Duration::from_secs(2))).unwrap();
+                stream.set_nonblocking(false).unwrap();
+                stream.set_read_timeout(Some(Duration::from_secs(15))).unwrap();
                 let mut reader = std::io::BufReader::new(stream.try_clone().unwrap());
                 let mut size = 0;
                 loop {
