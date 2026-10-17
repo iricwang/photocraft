@@ -1,0 +1,37 @@
+{
+  "selectedProject": "${DEFOLD_REPO}/tmp/craft-multi/project-a",
+  "publishedProject": "project-b",
+  "project_a_x": 420,
+  "project_b_x": 450,
+  "session": {
+    "active": 0,
+    "background": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "documents": [
+      {
+        "dirty": false,
+        "height": 600,
+        "index": 0,
+        "name": "main.gui",
+        "path": "${DEFOLD_REPO}/tmp/craft-multi/project-b/main.gui",
+        "revision": 2,
+        "width": 800
+      }
+    ],
+    "focus": {
+      "Image": 1
+    },
+    "foreground": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "guiDocuments": []
+  },
+  "status": "GUI 和图像已发布到 Defold"
+}

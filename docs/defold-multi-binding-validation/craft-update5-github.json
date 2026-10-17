@@ -1,0 +1,65 @@
+{
+  "feed": "published GitHub HTTPS",
+  "inventory": {
+    "config": {
+      "schema": 1,
+      "channel": "ai-p0",
+      "platform": "macos-aarch64",
+      "revision": 5,
+      "version": "0.9.0-patch.5",
+      "feed": "https://github.com/iricwang/photocraft/releases/download/patch-ai-p0/manifest-macos-aarch64.json"
+    },
+    "files": {
+      "Contents/Info.plist": {
+        "size": 6868,
+        "sha256": "77205d8cc1a751faef756c11027d21aa229d034db7016b21b0dd7ae762412735",
+        "mode": 420
+      },
+      "Contents/MacOS/PhotoCraft": {
+        "size": 72145600,
+        "sha256": "96fca6f69ac8a990c41dd79f2e3c21ba6ac51669db686a8f2c37cca27ed305ac",
+        "mode": 493
+      },
+      "Contents/MacOS/photocraft-codex-bridge": {
+        "size": 3092736,
+        "sha256": "b6ec2c84cd0d4a779716f56304db3df7bae711b06e870b30f6685edae51d3f83",
+        "mode": 493
+      },
+      "Contents/MacOS/photocraft-project-bridge": {
+        "size": 10036592,
+        "sha256": "685db29fc0ea3367cedb1fe70e26bb9be4e51bf2ebad620507e0ca8595552bfb",
+        "mode": 493
+      },
+      "Contents/MacOS/photocraft-updater": {
+        "size": 3928640,
+        "sha256": "0a625c33cbc9fd6224ba5d2402f46ef0e7a5f24164d3e09aa902d8a6ac18d80d",
+        "mode": 493
+      },
+      "Contents/PkgInfo": {
+        "size": 8,
+        "sha256": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0",
+        "mode": 420
+      },
+      "Contents/Resources/PhotoCraft.icns": {
+        "size": 737151,
+        "sha256": "b7f27e45d0da9f25f32e04d8ea4998c237c8ac0d49d2097f67cb769d22f1c664",
+        "mode": 420
+      },
+      "Contents/Resources/patch-config.json": {
+        "size": 227,
+        "sha256": "ffd2a132d22bb85097bc7baa87f7423b6f79b5fffd1d3375fb5e645370e3416d",
+        "mode": 420
+      },
+      "Contents/_CodeSignature/CodeResources": {
+        "size": 3388,
+        "sha256": "009be27795a1ac6dfc7cadf5aafd2c95fd9ff63d4bc19046f977772130bddec4",
+        "mode": 420
+      }
+    }
+  },
+  "install": {
+    "backup": "${DEFOLD_REPO}/tmp/craft-multi/craft5-second/.PhotoCraft.app.patch-backup-3",
+    "phase": "complete",
+    "revision": 5
+  }
+}
