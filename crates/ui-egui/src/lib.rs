@@ -1,4 +1,4 @@
-//! Photocraft's first UI shell, built on egui/eframe.
+//! PhotoCraft's first UI shell, built on egui/eframe.
 //!
 //! This crate is deliberately thin. Every action goes through
 //! [`photocraft_engine::Session::execute`], and all UI state lives in [`state::UiState`] (plain
@@ -30,6 +30,7 @@ pub mod anchor_tools;
 pub mod artboard_tool;
 pub mod artboard_ui;
 pub(crate) mod background_redraw;
+pub mod bidi_text;
 mod blend_keys;
 pub(crate) mod blend_preview;
 pub mod blur_pins;
@@ -81,6 +82,7 @@ pub mod dialogs;
 pub mod direct_select;
 pub mod direction;
 pub mod discard_ui;
+pub mod disk_change_prompt;
 pub mod distort_ui;
 pub mod doc_props_ui;
 pub mod dock;
@@ -357,6 +359,15 @@ pub(crate) fn plain_raster(doc: &Document) -> Option<&photocraft_doc::Layer> {
 /// Encode a document: (file bytes, warnings about anything approximated or dropped).
 pub type ExportFn = Box<dyn Fn(&Document, &str, &ExportSettings) -> Result<(Vec<u8>, Vec<String>), String>>;
 pub type WriteFn = Box<dyn FnMut(&str, &[u8]) -> Result<(), String>>;
+/// What a file on disk looked like when a document last read or wrote it: File › Save asks
+/// before replacing a file another app changed since (#6596).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct FileStamp {
+    pub len: u64,
+    pub modified: Option<std::time::SystemTime>,
+}
+/// The [`FileStamp`] of the file at a path, `None` when it can't be read.
+pub type FileStampFn = Box<dyn Fn(&str) -> Option<FileStamp>>;
 /// Encode a document and write it to a path, reporting the stage to the job; returns the export
 /// warnings. Runs on a worker thread (see [`Services::save_file`]). It must call
 /// [`jobs_ui::SaveCtl::commit`] right before replacing the file, and write nothing if that fails.
@@ -460,6 +471,9 @@ pub struct Services {
     pub file_dialog: Option<FileDialogFn>,
     /// Write bytes to a path (native) or trigger a download (web).
     pub write: Option<WriteFn>,
+    /// Size and modification time of a file (native); `None` on the web, where Save never
+    /// writes back to a file.
+    pub file_stamp: Option<FileStampFn>,
     /// Encode and write in one step on a worker thread, so a large save doesn't freeze the
     /// window (#2017). With background jobs on, saves use it instead of `export` and `write`.
     pub save_file: Option<SaveFileFn>,
@@ -672,7 +686,7 @@ pub struct PhotocraftApp {
     /// The document each of `ui.views` belongs to, as of the last [`Self::sync_views`].
     view_docs: Vec<DocId>,
     pub fps: f32,
-    last_frame_time: f64,
+    pub(crate) last_frame_time: f64,
     thumbs: HashMap<(photocraft_doc::LayerId, u8), (u64, egui::TextureHandle)>,
     /// The document area each layer thumbnail in `thumbs` frames (the canvas, or the layer's
     /// bounds with Clip Thumbnails to Layer Bounds; #4281).
@@ -804,6 +818,9 @@ pub struct PhotocraftApp {
     /// Where each document was last saved or exported to through a dialog (#1826): its next Save
     /// As or export dialog starts there rather than beside the document. Session-only.
     pub(crate) save_dirs: HashMap<photocraft_doc::DocId, std::path::PathBuf>,
+    /// Each document's own file as it was when the document was opened from it or saved to it
+    /// (see [`FileStamp`]).
+    pub(crate) disk_stamps: HashMap<photocraft_doc::DocId, (String, FileStamp)>,
     /// A save to an RGB Targa parked behind the Targa Options prompt (see `targa_options_ui`).
     pub(crate) targa_options: Option<targa_options_ui::Prompt>,
     /// Files read but not opened yet: the first waits on its profile prompt, the rest behind it
@@ -817,6 +834,12 @@ pub struct PhotocraftApp {
     /// `jobs_ui`). The desktop app turns it on; off (the default), everything runs inline as
     /// before, which tests and scripts rely on.
     pub background_jobs: bool,
+    /// Shortest time between frames (ms), or `None` for no cap. A present mode that doesn't wait
+    /// for the display (Low-Latency Drawing) would otherwise redraw as fast as it can while
+    /// anything keeps requesting repaints (a drag hovering, autoscroll, Liquify held still).
+    /// After #4472 (astigmata).
+    pub min_frame_ms: Option<f64>,
+    last_frame_start_ms: f64,
     /// Background job bookkeeping: opening tabs, control replies waiting on a job.
     pub jobs: jobs_ui::JobsUi,
     pub ai_runtime: ai_service::Runtime,
@@ -950,11 +973,14 @@ impl PhotocraftApp {
             file_dialog: None,
             tiff_options: None,
             save_dirs: HashMap::new(),
+            disk_stamps: HashMap::new(),
             targa_options: None,
             held_opens: Default::default(),
             allow_close: false,
             stylus: Default::default(),
             background_jobs: false,
+            min_frame_ms: None,
+            last_frame_start_ms: 0.0,
             jobs: Default::default(),
             ai_runtime: Default::default(),
             #[cfg(all(debug_assertions, not(target_arch = "wasm32")))]
@@ -1071,6 +1097,21 @@ impl PhotocraftApp {
             && let Some(authorize) = self.services.automation_command.as_ref()
         {
             authorize(id, &params)?;
+        }
+        // A new layer while Free Transform is open applies the transform first, as Photoshop does
+        // (#5667): History reads the transform (or Place Embedded), then New Layer. Only for a
+        // command that can run; a transform refused or still being applied keeps the box open and
+        // the command doesn't run.
+        if photocraft_engine::PRECHECKED.contains(&id) && self.ui.transform.is_some() {
+            // Bad params or a command that can't run leave the box as it is.
+            self.session.precheck(id, &params).map_err(|e| e.to_string())?;
+            transform_tool::commit(self);
+            if transform_tool::committing(self).is_some() {
+                return Err(tl!("Free Transform is still being applied; try again when it has finished.").into());
+            }
+            if self.ui.transform.is_some() {
+                return Err(if self.ui.status.is_empty() { tl!("The transform couldn't be applied.").into() } else { self.ui.status.clone() });
+            }
         }
         if let Some(result) = panel_docking::command(self, id, &params) {
             return result;
@@ -1457,6 +1498,13 @@ impl PhotocraftApp {
         self.pick_save(&suggested, move |app, path| {
             app.with_document(doc, |app| {
                 let own = app.session.active().and_then(|st| st.path.clone());
+                // Confirming the document's own file: ask first if another app changed it (#6596).
+                if plain_save
+                    && own.as_deref() == Some(path.as_str())
+                    && let Some(r) = crate::disk_change_prompt::intercept(app, doc, &path, true)
+                {
+                    return r;
+                }
                 let r = app.save_to(path.clone(), tga_bits)?;
                 if plain_save && own.as_deref() == Some(path.as_str()) {
                     app.journal_as_plain_save(&path);
@@ -1467,7 +1515,7 @@ impl PhotocraftApp {
     }
 
     /// [`Self::save_as_with`] once the path is known.
-    fn save_to(&mut self, path: String, tga_bits: Option<photocraft_io::TgaBits>) -> Result<Value, String> {
+    pub(crate) fn save_to(&mut self, path: String, tga_bits: Option<photocraft_io::TgaBits>) -> Result<Value, String> {
         // An RGB Targa asks for its bits per pixel, unless the caller chose them; the save
         // continues from the prompt (still a copy when it would be one without the prompt),
         // which records the step once answered.
@@ -1514,7 +1562,7 @@ impl PhotocraftApp {
     }
 
     /// Re-label the Save As just journaled for `path` as File › Save (see [`Self::save_dialog_flow`]).
-    fn journal_as_plain_save(&mut self, path: &str) {
+    pub(crate) fn journal_as_plain_save(&mut self, path: &str) {
         if let Some(last) = self.session.journal.last_mut()
             && last.0 == "file.saveAs"
             && last.1.get("path").and_then(Value::as_str) == Some(path)
@@ -1657,6 +1705,7 @@ impl PhotocraftApp {
                     st.saved_to(path.to_string());
                     // The job locked the document, but record the revision that was written.
                     st.saved_revision = revision;
+                    app.remember_stamp(doc, path);
                 }
                 // "Save Document" script events and File › Generate › Image Assets.
                 if hooks
@@ -1676,11 +1725,29 @@ impl PhotocraftApp {
             if hooks {
                 self.push_recent(path);
             }
+        } else if self.disk_stamps.get(&doc).is_some_and(|(own, _)| own == path) {
+            // A copy written over the document's own file is this app's change too.
+            self.remember_stamp(doc, path);
         }
         self.ui.status_error = false;
         let what = crate::i18n::fmt(tl!("Saved {name}"), &[("name", file_open::display_name(path).as_str())]);
         notices::io_warnings(self, &what, warnings);
         self.sync_views();
+    }
+
+    /// Note how `doc`'s own file at `path` looks now that the document read or wrote it.
+    pub(crate) fn remember_stamp(&mut self, doc: photocraft_doc::DocId, path: &str) {
+        match self.services.file_stamp.as_ref().and_then(|stamp| stamp(path)) {
+            Some(now) => self.disk_stamps.insert(doc, (path.to_string(), now)),
+            None => self.disk_stamps.remove(&doc),
+        };
+    }
+
+    /// Another app changed `doc`'s own file at `path` since the document was opened from it or
+    /// last saved to it. A file that is gone, or one never stamped, counts as unchanged.
+    pub(crate) fn changed_on_disk(&self, doc: photocraft_doc::DocId, path: &str) -> bool {
+        let Some((own, then)) = self.disk_stamps.get(&doc) else { return false };
+        own == path && self.services.file_stamp.as_ref().and_then(|stamp| stamp(path)).is_some_and(|now| now != *then)
     }
 
     /// TIFF Options or Targa Options is waiting on an answer before a save is written.
@@ -1807,6 +1874,20 @@ impl PhotocraftApp {
     }
 }
 
+impl PhotocraftApp {
+    /// Wait out the rest of [`Self::min_frame_ms`] since the last frame started.
+    fn cap_frame_rate(&mut self) {
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(min) = self.min_frame_ms.filter(|m| m.is_finite() && *m > 0.0) {
+            let wait = min.min(100.0) - (gpu_canvas::now_ms() - self.last_frame_start_ms);
+            if wait > 0.0 {
+                std::thread::sleep(std::time::Duration::from_secs_f64(wait / 1000.0));
+            }
+        }
+        self.last_frame_start_ms = gpu_canvas::now_ms();
+    }
+}
+
 impl eframe::App for PhotocraftApp {
     fn on_exit(&mut self) {
         if let Err(err) = tool_memory::save_on_exit(self) {
@@ -1815,6 +1896,7 @@ impl eframe::App for PhotocraftApp {
     }
 
     fn logic(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        self.cap_frame_rate();
         i18n::set_current(i18n::Lang::from_pref(&self.session.prefs().interface.language));
         // Caps Lock state read from the OS once per frame (see `Services::caps_lock`): the canvas
         // cursor block needs it before the frame renders. `None` (Wayland/web) keeps `false`.
@@ -2074,7 +2156,10 @@ impl eframe::App for PhotocraftApp {
         if self.stroke_trace.enabled() {
             self.stroke_trace.canvas(self.perf.frame_refresh_ms);
             let info = &self.perf.gpu_info;
-            self.stroke_trace.end_frame(ui_ms, self.live_stroke.is_some(), || format!("{} {}", info.backend, info.adapter).trim().to_string());
+            self.stroke_trace.end_frame(ui_ms, self.live_stroke.is_some(), || {
+                let gpu = format!("{} {}", info.backend, info.adapter).trim().to_string();
+                if info.present.is_empty() { gpu } else { format!("{gpu}, {}", info.present) }
+            });
         }
         // Synthetic input is injected one press/release step per frame: keep frames coming until
         // the queue is empty, then release control replies waiting on it.
@@ -2708,6 +2793,10 @@ mod pixel_aspect_tests;
 #[cfg(test)]
 mod transform_fx_tests;
 
+#[cfg(test)]
+mod layer_props_ui_tests;
+#[cfg(test)]
+mod transform_switch_tests;
 #[cfg(test)]
 mod transform_undo_tests;
 

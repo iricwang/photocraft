@@ -1961,6 +1961,9 @@ mod tests {
         for (x, y) in [(5, 5), (5, 6), (6, 6)] {
             assert!(alpha(&shown, x, y) > 0.99, "({x}, {y}) is inside the reduced square");
         }
+        for (x, y) in [(4, 4), (7, 7)] {
+            assert!(alpha(&shown, x, y) > 0.5, "({x}, {y}) is a corner of the reduced square");
+        }
         for (x, y) in [(2, 2), (9, 9), (12, 12), (15, 15)] {
             assert!(alpha(&shown, x, y) < 0.01, "({x}, {y}) is outside the reduced square");
         }
