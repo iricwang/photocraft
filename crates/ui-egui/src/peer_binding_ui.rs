@@ -22,6 +22,10 @@ pub struct BindingUi {
     auto_at: Option<f64>,
     #[cfg(not(target_arch = "wasm32"))]
     auto_attempt: bool,
+    #[cfg(not(target_arch = "wasm32"))]
+    auto_cursor: usize,
+    #[cfg(not(target_arch = "wasm32"))]
+    attempt_address: Option<String>,
     address: String,
     resource: String,
     resources: Vec<String>,
@@ -30,7 +34,7 @@ pub struct BindingUi {
 enum Event {
     Ready(Peer),
     Quiet,
-    Connected,
+    Connected(Peer),
     Bound(Peer),
     Mirrored(Peer),
 }
@@ -59,11 +63,12 @@ fn request(target: String, automatic: bool) -> link_result::Result<Event> {
     if status["app"] != "Defold" {
         return Err(photocraft_engine::EngineError::Other("This address is not a Defold binding service".into()));
     }
-    let existing = { link::state().active.clone() };
-    if existing.as_ref().is_some_and(|p| status["id"] == p.id && status["bound"] == id) {
-        return Ok(Event::Connected);
+    let existing = { link::state().connections().into_iter().find(|p| status["id"] == p.id).cloned() };
+    let bound = status["boundPeers"].as_array().is_some_and(|ids| ids.iter().any(|peer| peer == &id)) || status["bound"] == id;
+    if let Some(existing) = existing.as_ref().filter(|_| bound) {
+        return Ok(Event::Connected(existing.clone()));
     }
-    if automatic && !status["bound"].is_null() && status["bound"] != id {
+    if automatic && status["bindingVersion"] != 2 && !status["bound"].is_null() && status["bound"] != id {
         return Ok(Event::Quiet);
     }
     let reply = native::json_request(&target, "/binding/request", "", &json!({"id":id,"address":native::own_address(&target,port)?}))?;
@@ -74,10 +79,6 @@ fn request(target: String, automatic: bool) -> link_result::Result<Event> {
         let result = native::json_request(&peer.address, "/binding/result", &peer.token, &json!({}))?;
         if result["phase"] == "ready" {
             native::resolve_project(&mut peer)?;
-            if automatic && existing.as_ref().is_some_and(|old| !old.project.is_empty() && !link::same_project(&old.project, &peer.project)) {
-                let _ = native::json_request(&peer.address, "/binding/cancel", &peer.token, &json!({}));
-                return Ok(Event::Quiet);
-            }
             return Ok(Event::Ready(peer));
         }
         if result["phase"] == "rejected" {
@@ -90,6 +91,9 @@ fn request(target: String, automatic: bool) -> link_result::Result<Event> {
 }
 #[cfg(not(target_arch = "wasm32"))]
 fn different_project(app: &PhotocraftApp, peer: &Peer) -> bool {
+    if link::state().connections().into_iter().any(|known| known.address == peer.address && link::same_project(&known.project, &peer.project)) {
+        return false;
+    }
     if let Some(old) = &link::state().active
         && !old.project.is_empty()
         && !link::same_project(&old.project, &peer.project)
@@ -131,19 +135,21 @@ pub fn tick(app: &mut PhotocraftApp, ctx: &egui::Context) {
     let mut ui = std::mem::take(&mut app.peer_binding);
     if let Some(rx) = &ui.worker {
         match rx.try_recv() {
-            Ok(Ok(Event::Connected)) => {
+            Ok(Ok(Event::Connected(peer))) => {
                 ui.worker = None;
                 ui.auto_attempt = false;
                 let mut state = link::state();
                 state.working = false;
-                state.connected = true;
+                state.mark_address(&peer.address, true);
                 state.error = None;
             }
             Ok(Ok(Event::Quiet)) => {
                 ui.worker = None;
                 ui.auto_attempt = false;
                 link::state().working = false;
-                link::state().connected = false;
+                if let Some(address) = &ui.attempt_address {
+                    link::state().mark_address(address, false);
+                }
             }
             Ok(Ok(Event::Ready(peer))) => {
                 ui.auto_attempt = false;
@@ -200,7 +206,11 @@ pub fn tick(app: &mut PhotocraftApp, ctx: &egui::Context) {
                 app.ui.status = tl!("Defold bound; project resources are ready").into();
             }
             Ok(Err(e)) => {
-                link::state().connected = false;
+                if ui.auto_attempt
+                    && let Some(address) = &ui.attempt_address
+                {
+                    link::state().mark_address(address, false);
+                }
                 link::state().working = false;
                 link::state().frozen = false;
                 ui.worker = None;
@@ -229,7 +239,12 @@ pub fn tick(app: &mut PhotocraftApp, ctx: &egui::Context) {
             let mut s = link::state();
             if s.incoming.is_none() && s.outgoing.is_none() && !s.working {
                 ui.auto_attempt = true;
-                s.outgoing = Some(s.active.as_ref().map(|p| p.address.clone()).unwrap_or_else(|| format!("127.0.0.1:{}", link::DEFOLD_PORT)));
+                let mut addresses: Vec<_> = s.connections().into_iter().map(|peer| peer.address.clone()).collect();
+                addresses.push(format!("127.0.0.1:{}", link::DEFOLD_PORT));
+                addresses.sort();
+                addresses.dedup();
+                s.outgoing = addresses.get(ui.auto_cursor % addresses.len()).cloned();
+                ui.auto_cursor = ui.auto_cursor.wrapping_add(1);
             }
         }
     }
@@ -237,6 +252,7 @@ pub fn tick(app: &mut PhotocraftApp, ctx: &egui::Context) {
         let target = link::state().outgoing.take();
         if let Some(target) = target {
             let automatic = ui.auto_attempt;
+            ui.attempt_address = Some(target.clone());
             worker(&mut ui, ctx, move || request(target, automatic));
         }
     }
@@ -271,7 +287,7 @@ pub fn tick(app: &mut PhotocraftApp, ctx: &egui::Context) {
     }
     if let Some(peer) = ui.ready.clone() {
         let incoming_ticket = incoming.as_ref().filter(|o| o.ticket == peer.token).map(|o| o.ticket.clone());
-        let known = { link::state().active.clone() };
+        let known = { link::state().connections().into_iter().find(|known| known.address == peer.address).cloned() };
         let mut accepted = !(different_project(app, &peer) || incoming_ticket.is_some() && incoming_needs_consent(&peer, known.as_ref()));
         let mut cancelled = false;
         if !accepted {
@@ -326,9 +342,9 @@ pub fn tick(app: &mut PhotocraftApp, ctx: &egui::Context) {
     if ui.worker.is_none() {
         let open = {
             let mut s = link::state();
-            if s.active.as_ref().is_some_and(|p| !p.root.is_empty()) && !s.opens.is_empty() {
-                let path = s.opens.remove(0);
-                s.active.as_ref().map(|p| (p.root.clone(), path))
+            if !s.opens.is_empty() {
+                let (peer, path) = s.opens.remove(0);
+                s.peer_for_token(&peer.token).filter(|current| !current.root.is_empty()).map(|current| (current.root.clone(), path))
             } else {
                 None
             }
@@ -356,6 +372,7 @@ pub fn tick(_: &mut PhotocraftApp, _: &egui::Context) {}
 pub fn panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     ui.strong(tl!("Defold binding"));
     let status = link::inspect();
+    ui.label(format!("PhotoCraft · {}", status["port"]));
     if let Some(address) = status["peer"]["address"].as_str() {
         ui.label(format!("{} {address}", if status["connected"] == true { tl!("Bound to") } else { tl!("Reconnecting to") }));
         if let Some(project) = status["peer"]["project"].as_str() {
@@ -376,6 +393,47 @@ pub fn panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     if let Some(error) = status["error"].as_str() {
         ui.add(egui::Label::new(error).wrap());
     }
+    let peers = status["peers"].as_array().cloned().unwrap_or_default();
+    let mut selected = status["peer"]["id"].as_str().unwrap_or("").to_owned();
+    let previous = selected.clone();
+    ui.add_enabled_ui(status["working"] != true, |ui| {
+        egui::ComboBox::from_id_salt("bound-defold-connection")
+            .selected_text(status["peer"]["project"].as_str().unwrap_or("—"))
+            .width(ui.available_width())
+            .show_ui(ui, |ui| {
+                for item in &peers {
+                    let peer = &item["peer"];
+                    if let Some(id) = peer["id"].as_str() {
+                        ui.selectable_value(
+                            &mut selected,
+                            id.to_owned(),
+                            format!("{} · {}", peer["project"].as_str().unwrap_or(""), peer["address"].as_str().unwrap_or("")),
+                        );
+                    }
+                }
+            });
+    });
+    if selected != previous {
+        if let Err(error) = app.run("defold.selectBinding", json!({"id":selected})) {
+            app.ui.status = error;
+            app.ui.status_error = true;
+        } else {
+            app.peer_binding.resources.clear();
+            app.peer_binding.resource.clear();
+            link::state().refresh = true;
+        }
+    }
+    if !selected.is_empty() && ui.add_enabled(status["working"] != true, egui::Button::new(tl!("Disconnect selected Defold"))).clicked() {
+        if let Err(error) = app.run("defold.unbind", json!({"id":selected})) {
+            app.ui.status = error;
+            app.ui.status_error = true;
+        } else {
+            app.peer_binding.resource.clear();
+            app.peer_binding.resources.clear();
+            let refresh = link::inspect()["peer"].is_object();
+            link::state().refresh = refresh;
+        }
+    }
     let bound_peer = { link::state().active.clone() };
     if let Some(peer) = bound_peer
         && !peer.root.is_empty()
@@ -389,7 +447,7 @@ pub fn panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
         ui.text_edit_singleline(&mut app.peer_binding.resource);
         if ui.button(tl!("Open GUI in both editors")).clicked() {
             let resource = app.peer_binding.resource.clone();
-            let _ = app.run("defold.openBoundResource", json!({"path":resource}));
+            let _ = app.run("defold.openBoundResource", json!({"path":resource,"id":peer.id}));
         }
     }
     if status["pending"]["phase"] == "ready" {
@@ -503,6 +561,24 @@ mod tests {
         let mut another = remote.clone();
         another.project = "another-project".into();
         assert!(incoming_needs_consent(&remote, Some(&another)));
+    }
+    #[test]
+    fn known_project_reconnection_does_not_switch_or_close_other_project_documents() {
+        let _serial = SERIAL.lock().unwrap();
+        let (app, saved) = fixture("confirm");
+        let mut a = peer("a");
+        a.address = "127.0.0.1:19001".into();
+        a.root = "/game/a".into();
+        a.project = a.root.clone();
+        let mut b = peer("b");
+        b.address = "127.0.0.1:19002".into();
+        b.root = "/game/b".into();
+        b.project = b.root.clone();
+        link::state().put(a.clone());
+        link::state().put(b);
+        assert!(!different_project(&app, &a));
+        assert!(app.session.documents()[0].is_dirty());
+        *link::state() = saved;
     }
     #[test]
     fn ordinary_dirty_documents_do_not_require_closing_for_a_project_connection() {

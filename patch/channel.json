@@ -1,6 +1,6 @@
 {
   "channel": "ai-p0",
-  "notes": "Publish native patch updates with verified GitHub download, installation and restart",
-  "revision": 3,
+  "notes": "Support multiple Defold project connections and multiple PhotoCraft clients with independent sessions and safe project routing",
+  "revision": 4,
   "schema": 1
 }

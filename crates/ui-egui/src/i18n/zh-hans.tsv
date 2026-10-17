@@ -3093,3 +3093,5 @@ Publish these saved related changes	一并发布这些已保存的关联修改
 	Replace	替换
 	{name} was changed by another app after it was opened or saved here.	{name} 在此处打开或存储后已被其他应用更改。
 	Replace it with this document, or cancel and use File › Save As to keep both.	用此文档替换它，或取消并使用“文件 › 另存为”以保留两者。
+
+	Disconnect selected Defold	断开所选 Defold 连接

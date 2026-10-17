@@ -3,6 +3,7 @@
 use crate::{Result, commands::CommandSpec, defold_cmds::err};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Mutex, OnceLock};
 #[cfg(not(target_arch = "wasm32"))]
 use std::time::Duration;
@@ -29,6 +30,8 @@ pub struct Offer {
 }
 #[derive(Default)]
 pub struct Binding {
+    pub peers: BTreeMap<String, Peer>,
+    pub offline: BTreeSet<String>,
     pub id: String,
     pub port: u16,
     pub active: Option<Peer>,
@@ -38,8 +41,92 @@ pub struct Binding {
     pub working: bool,
     pub frozen: bool,
     pub refresh: bool,
-    pub opens: Vec<String>,
+    pub opens: Vec<(Peer, String)>,
     pub error: Option<String>,
+}
+impl Binding {
+    pub fn for_root(&self, root: &str) -> Result<Option<Peer>> {
+        let candidates: Vec<_> = self.connections().into_iter().filter(|p| self.connected_to(p) && same_project(&p.root, root)).collect();
+        if let Some(peer) = self.active.as_ref().filter(|p| self.connected_to(p) && same_project(&p.root, root)) {
+            return Ok(Some(peer.clone()));
+        }
+        if candidates.len() > 1 {
+            return Err(err("Select the Defold connection for this project before synchronizing"));
+        }
+        if let Some(peer) = candidates.first() {
+            return Ok(Some((*peer).clone()));
+        }
+        if std::path::Path::new(root).join(".photocraft-remote").is_file() {
+            return Err(err("This remote workspace is not bound. Reconnect before editing or synchronizing."));
+        }
+        Ok(None)
+    }
+    pub fn connections(&self) -> Vec<&Peer> {
+        let mut peers: Vec<_> = self.peers.values().collect();
+        if let Some(active) = &self.active
+            && !self.peers.contains_key(&active.id)
+        {
+            peers.push(active);
+        }
+        peers
+    }
+    pub fn connected_to(&self, peer: &Peer) -> bool {
+        !self.offline.contains(&peer.id) && (self.peers.contains_key(&peer.id) || self.connected)
+    }
+    pub fn peer_for_token(&self, token: &str) -> Option<&Peer> {
+        if token.is_empty() {
+            return None;
+        }
+        self.connections().into_iter().find(|peer| peer.token == token)
+    }
+    pub fn put(&mut self, peer: Peer) {
+        if let Some(old) = &self.active {
+            self.peers.entry(old.id.clone()).or_insert_with(|| old.clone());
+        }
+        let stale: Vec<_> = self.peers.values().filter(|old| old.address == peer.address || old.id == peer.id).map(|old| old.id.clone()).collect();
+        for id in stale {
+            self.peers.remove(&id);
+            self.offline.remove(&id);
+        }
+        self.offline.remove(&peer.id);
+        self.peers.insert(peer.id.clone(), peer.clone());
+        self.active = Some(peer);
+        self.connected = true;
+        self.error = None;
+    }
+    pub fn select(&mut self, id: &str) -> Result<()> {
+        if self.working {
+            return Err(err("Wait for the current connection operation to finish"));
+        }
+        let peer = self.connections().into_iter().find(|p| p.id == id).cloned().ok_or_else(|| err("Unknown Defold connection"))?;
+        self.connected = self.connected_to(&peer);
+        self.active = Some(peer);
+        Ok(())
+    }
+    pub fn remove_token(&mut self, token: &str) -> Option<Peer> {
+        let peer = self.peer_for_token(token)?.clone();
+        self.peers.remove(&peer.id);
+        self.offline.remove(&peer.id);
+        self.opens.retain(|(queued, _)| queued.token != token);
+        if self.active.as_ref().is_some_and(|p| p.token == token) {
+            self.active = self.peers.values().next().cloned();
+            self.connected = self.active.as_ref().is_some_and(|p| !self.offline.contains(&p.id));
+        }
+        Some(peer)
+    }
+    pub fn mark_address(&mut self, address: &str, connected: bool) {
+        let ids: Vec<_> = self.connections().into_iter().filter(|p| p.address == address).map(|p| p.id.clone()).collect();
+        for id in ids {
+            if connected {
+                self.offline.remove(&id);
+            } else {
+                self.offline.insert(id);
+            }
+        }
+        if self.active.as_ref().is_some_and(|p| p.address == address) {
+            self.connected = connected;
+        }
+    }
 }
 static STATE: OnceLock<Mutex<Binding>> = OnceLock::new();
 pub fn state() -> std::sync::MutexGuard<'static, Binding> {
@@ -57,22 +144,13 @@ pub fn address(input: &str, port: u16) -> Result<std::net::SocketAddr> {
         .map_err(|_| err("Enter an IP address, optionally followed by a port"))
 }
 pub fn active_for(root: &str) -> Result<Option<Peer>> {
-    let state = state();
-    let path = std::path::Path::new(root);
-    if path.join(".photocraft-remote").is_file() {
-        return state
-            .active
-            .as_ref()
-            .filter(|p| state.connected && same_project(&p.root, root))
-            .cloned()
-            .map(Some)
-            .ok_or_else(|| err("This remote workspace is not bound. Reconnect before editing or synchronizing."));
-    }
-    Ok(state.active.as_ref().filter(|p| state.connected && same_project(&p.root, root)).cloned())
+    state().for_root(root)
 }
 /// Compare directory identities, including Windows drive casing and extended paths.
 pub fn same_project(a: &str, b: &str) -> bool {
-    if a.is_empty() || b.is_empty() { return false; }
+    if a.is_empty() || b.is_empty() {
+        return false;
+    }
     let normalize = |s: &str| {
         let p = std::fs::canonicalize(s).unwrap_or_else(|_| s.into());
         let s = p.to_string_lossy().replace('\\', "/");
@@ -86,7 +164,7 @@ pub fn online(root: &str) -> bool {
 }
 pub fn inspect() -> Value {
     let s = state();
-    json!({"id":s.id,"port":s.port,"peer":s.active,"connected":s.connected,"pending":s.incoming.as_ref().map(|o|json!({"peer":o.peer,"phase":o.phase})),"outgoing":s.outgoing,"working":s.working,"error":s.error})
+    json!({"id":s.id,"port":s.port,"peer":s.active,"connected":s.connected,"bindingVersion":2,"peers":s.connections().into_iter().map(|p|json!({"peer":p,"connected":s.connected_to(p)})).collect::<Vec<_>>(),"pending":s.incoming.as_ref().map(|o|json!({"peer":o.peer,"phase":o.phase})),"outgoing":s.outgoing,"working":s.working,"error":s.error})
 }
 pub fn specs() -> Vec<CommandSpec> {
     vec![
@@ -95,12 +173,20 @@ pub fn specs() -> Vec<CommandSpec> {
             label: "Open Bound Defold GUI",
             menu: &[],
             shortcut: None,
-            params: r#"{"path":"/main/menu.gui"}"#,
+            params: r#"{"path":"/main/menu.gui","id":"optional editor session"}"#,
             enabled: crate::file_cmds::native,
             run: |session, p| {
                 #[cfg(not(target_arch = "wasm32"))]
                 {
-                    let peer = state().active.clone().filter(|p| !p.root.is_empty()).ok_or_else(|| err("Bind Defold first"))?;
+                    let peer = {
+                        let s = state();
+                        let peer = if let Some(id) = p.get("id") {
+                            s.connections().into_iter().find(|peer| Some(peer.id.as_str()) == id.as_str()).cloned()
+                        } else {
+                            s.active.clone()
+                        };
+                        peer.filter(|peer| !peer.root.is_empty()).ok_or_else(|| err("Bind Defold first"))?
+                    };
                     let path = native::safe_relative(p["path"].as_str().unwrap_or(""))?;
                     if !path.to_string_lossy().ends_with(".gui") {
                         return Err(err("Choose a GUI resource"));
@@ -131,6 +217,47 @@ pub fn specs() -> Vec<CommandSpec> {
                 s.outgoing = Some(target);
                 s.error = None;
                 Ok(json!({"pending":true}))
+            },
+            journal: false,
+        },
+        CommandSpec {
+            id: "defold.selectBinding",
+            label: "Select Defold Connection",
+            menu: &[],
+            shortcut: None,
+            params: r#"{"id":"editor-session-id"}"#,
+            enabled: crate::file_cmds::native,
+            run: |_, p| {
+                state().select(p["id"].as_str().unwrap_or(""))?;
+                Ok(inspect())
+            },
+            journal: false,
+        },
+        CommandSpec {
+            id: "defold.unbind",
+            label: "Disconnect Defold",
+            menu: &[],
+            shortcut: None,
+            params: r#"{"id":"editor-session-id"}"#,
+            enabled: crate::file_cmds::native,
+            run: |_, p| {
+                let mut s = state();
+                if s.working {
+                    return Err(err("Wait for the current connection operation to finish"));
+                }
+                let peer = s
+                    .connections()
+                    .into_iter()
+                    .find(|peer| Some(peer.id.as_str()) == p["id"].as_str())
+                    .cloned()
+                    .ok_or_else(|| err("Unknown Defold connection"))?;
+                s.remove_token(&peer.token);
+                drop(s);
+                #[cfg(not(target_arch = "wasm32"))]
+                std::thread::spawn(move || {
+                    let _ = native::json_request(&peer.address, "/binding/release", &peer.token, &json!({}));
+                });
+                Ok(json!({"disconnected":true}))
             },
             journal: false,
         },
@@ -244,8 +371,13 @@ pub mod native {
         Ok(SocketAddr::new(socket.local_addr().map_err(err)?.ip(), port).to_string())
     }
     pub fn start() -> Result<()> {
-        let port = std::env::var("PHOTOCRAFT_BIND_PORT").ok().and_then(|s| s.parse().ok()).unwrap_or(CRAFT_PORT);
-        let listener = TcpListener::bind(("0.0.0.0", port)).map_err(err)?;
+        let explicit = std::env::var("PHOTOCRAFT_BIND_PORT").ok();
+        let port = explicit.as_ref().map(|value| value.parse::<u16>().map_err(err)).transpose()?.unwrap_or(CRAFT_PORT);
+        let listener = match TcpListener::bind(("0.0.0.0", port)) {
+            Err(error) if error.kind() == std::io::ErrorKind::AddrInUse && explicit.is_none() => TcpListener::bind(("0.0.0.0", 0)).map_err(err)?,
+            result => result.map_err(err)?,
+        };
+        let port = listener.local_addr().map_err(err)?.port();
         {
             let mut s = state();
             s.id = identity()?;
@@ -327,7 +459,9 @@ pub mod native {
             s.incoming = None;
         }
         match route {
-            "/binding/status" => Ok(json!({"app":"PhotoCraft","id":s.id,"bound":s.active.as_ref().map(|p|&p.id)})),
+            "/binding/status" => Ok(
+                json!({"app":"PhotoCraft","id":s.id,"bound":s.active.as_ref().map(|p|&p.id),"bindingVersion":2,"boundPeers":s.connections().into_iter().map(|p|&p.id).collect::<Vec<_>>()}),
+            ),
             "/binding/request" => {
                 let peer_id = body["id"].as_str().filter(|v| v.len() == 64).ok_or_else(|| err("Invalid peer identity"))?;
                 let target = address(body["address"].as_str().unwrap_or(""), DEFOLD_PORT)?.to_string();
@@ -337,7 +471,13 @@ pub mod native {
                 let ticket = identity()?;
                 s.incoming = Some(Offer {
                     ticket: ticket.clone(),
-                    peer: Peer { id: peer_id.into(), address: target, token: ticket.clone(), project: body["project"].as_str().unwrap_or("").into(), root: String::new() },
+                    peer: Peer {
+                        id: peer_id.into(),
+                        address: target,
+                        token: ticket.clone(),
+                        project: body["project"].as_str().unwrap_or("").into(),
+                        root: String::new(),
+                    },
                     phase: "confirm".into(),
                     expires: Instant::now() + Duration::from_secs(180),
                 });
@@ -363,30 +503,24 @@ pub mod native {
                 Ok(json!({"phase":"committing","id":s.id,"peer":offer.peer.id}))
             }
             "/binding/committed" => {
-                if s.active.as_ref().is_some_and(|p| p.token == token) {
+                if s.peer_for_token(token).is_some() {
                     Ok(json!({"phase":"bound","id":s.id}))
                 } else {
                     Ok(json!({"phase":"pending"}))
                 }
             }
             "/binding/release" => {
-                if s.active.as_ref().is_some_and(|p| p.token == token) {
-                    s.active = None;
-                    s.connected = false;
-                    s.error = Some("The other application switched its binding".into());
-                }
+                s.remove_token(token);
                 Ok(json!({"released":true}))
             }
             "/binding/open" => {
-                if s.active.as_ref().is_none_or(|p| p.token != token) || s.incoming.is_some() {
-                    return Err(err("Peer is not bound"));
-                }
+                let peer = s.peer_for_token(token).cloned().ok_or_else(|| err("Peer is not bound"))?;
                 let path = body["path"].as_str().ok_or_else(|| err("Missing resource path"))?;
                 safe_relative(path)?;
                 if !path.ends_with(".gui") || s.opens.len() >= 16 {
                     return Err(err("Open a GUI resource"));
                 }
-                s.opens.push(path.into());
+                s.opens.push((peer, path.into()));
                 Ok(json!({"queued":true}))
             }
             _ => Err(err("Unknown binding endpoint")),
@@ -469,7 +603,8 @@ pub mod native {
         if address(&peer.address, DEFOLD_PORT)?.ip().is_loopback() && Path::new(&peer.project).join("game.project").is_file() {
             peer.root = std::fs::canonicalize(&peer.project).map_err(err)?.to_string_lossy().into_owned();
         } else {
-            let cache = std::env::temp_dir().join("photocraft-peers").join(blake3::hash(format!("{}:{}", peer.address, peer.project).as_bytes()).to_hex().as_str());
+            let cache =
+                std::env::temp_dir().join("photocraft-peers").join(blake3::hash(format!("{}:{}", peer.address, peer.project).as_bytes()).to_hex().as_str());
             peer.root = cache.to_string_lossy().into_owned();
         }
         Ok(())
@@ -477,51 +612,32 @@ pub mod native {
     pub fn prepare_project(peer: &mut Peer) -> Result<()> {
         resolve_project(peer)?;
         // An existing mirror contains editable GUI sources. Reconnect only renews credentials.
-        if Path::new(&peer.root).join("game.project").is_file() { return Ok(()); }
+        if Path::new(&peer.root).join("game.project").is_file() {
+            return Ok(());
+        }
         mirror(peer)
     }
     pub fn accept_commit(ticket: &str) -> Result<Peer> {
-        let (peer, previous) = {
-            let mut s = state();
-            let offer = s
-                .incoming
-                .as_ref()
-                .filter(|o| o.ticket == ticket && o.phase == "commit" && o.expires > Instant::now())
-                .ok_or_else(|| err("Binding was cancelled or expired before switching"))?;
-            let peer = offer.peer.clone();
-            let previous = s.active.replace(peer.clone());
-            s.connected = true;
-            s.incoming = None;
-            s.opens.clear();
-            s.error = None;
-            (peer, previous)
-        };
-        if let Some(previous) = previous.filter(|old| old.id != peer.id) {
-            std::thread::spawn(move || {
-                let _ = json_request(&previous.address, "/binding/release", &previous.token, &json!({}));
-            });
-        }
+        let mut s = state();
+        let peer = s
+            .incoming
+            .as_ref()
+            .filter(|o| o.ticket == ticket && o.phase == "commit" && o.expires > Instant::now())
+            .ok_or_else(|| err("Binding was cancelled or expired before connecting"))?
+            .peer
+            .clone();
+        s.put(peer.clone());
+        s.incoming = None;
         Ok(peer)
     }
     pub fn replace(peer: Peer) {
-        let previous = {
-            let mut s = state();
-            s.error = None;
-            s.connected = true;
-            if s.active.as_ref().is_none_or(|old| old.id != peer.id) {
-                s.opens.clear();
-            }
-            s.active.replace(peer.clone())
-        };
-        if let Some(previous) = previous.filter(|old| old.id != peer.id) {
-            std::thread::spawn(move || {
-                let _ = json_request(&previous.address, "/binding/release", &previous.token, &json!({}));
-            });
-        }
+        state().put(peer);
     }
     pub fn upload(root: &str, files: &[(String, Vec<u8>)]) -> Result<()> {
         use base64::Engine;
-        if Path::new(root).join(".photocraft-remote").is_file() && let Some(peer) = active_for(root)? {
+        if Path::new(root).join(".photocraft-remote").is_file()
+            && let Some(peer) = active_for(root)?
+        {
             for (path, bytes) in files {
                 json_request(
                     &peer.address,
@@ -539,6 +655,64 @@ pub mod native {
 mod tests {
     use super::*;
     #[test]
+    fn connections_keep_independent_credentials_and_project_routing() {
+        let mut s = Binding::default();
+        let peer = |id: &str, root: &str, port: u16| Peer {
+            id: id.into(),
+            address: format!("127.0.0.1:{port}"),
+            token: format!("secret-{id}"),
+            project: root.into(),
+            root: root.into(),
+        };
+        let a = peer("a", "/game/a", 19001);
+        let b = peer("b", "/game/b", 19002);
+        s.put(a.clone());
+        s.put(b.clone());
+        assert_eq!(s.for_root("/game/a").unwrap().unwrap().id, "a");
+        assert_eq!(s.for_root("/game/b").unwrap().unwrap().id, "b");
+        assert!(s.for_root("/game/unbound").unwrap().is_none());
+
+        assert_eq!(s.connections().len(), 2);
+        assert_eq!(s.peer_for_token("secret-a").unwrap().root, "/game/a");
+        assert_eq!(s.peer_for_token("secret-b").unwrap().root, "/game/b");
+        s.put(Peer { token: "renewed-a".into(), ..a });
+        assert!(s.peer_for_token("secret-a").is_none());
+        assert!(s.peer_for_token("secret-b").is_some());
+        assert!(s.remove_token("secret-a").is_none());
+        s.remove_token("renewed-a");
+        assert_eq!(s.connections().len(), 1);
+        assert_eq!(s.active.as_ref().unwrap().id, "b");
+        assert!(s.connected_to(&b));
+        s.mark_address(&b.address, false);
+        assert!(!s.connected_to(&b));
+        assert!(s.select("unknown").is_err());
+    }
+    #[test]
+    fn reconnecting_one_endpoint_does_not_disconnect_other_endpoints() {
+        let mut s = Binding::default();
+        let peer = |id: &str, address: &str| Peer { id: id.into(), address: address.into(), token: id.into(), project: id.into(), root: id.into() };
+        s.put(peer("old", "127.0.0.1:19001"));
+        s.put(peer("other", "127.0.0.1:19002"));
+        s.put(peer("new", "127.0.0.1:19001"));
+        assert!(s.peer_for_token("old").is_none());
+        assert!(s.peer_for_token("other").is_some());
+        assert_eq!(s.connections().len(), 2);
+        s.mark_address("127.0.0.1:19001", false);
+        assert!(s.connected_to(s.peer_for_token("other").unwrap()));
+        assert!(!s.connected_to(s.peer_for_token("new").unwrap()));
+        s.select("other").unwrap();
+        assert!(s.connected);
+    }
+    #[test]
+    fn connection_commands_reject_missing_or_unknown_ids_without_panicking() {
+        for id in ["defold.selectBinding", "defold.unbind"] {
+            for params in [Value::Null, json!({}), json!({"id":-1}), json!({"id":"unknown"})] {
+                let mut session = crate::Session::new();
+                assert!(session.execute(id, params).is_err());
+            }
+        }
+    }
+    #[test]
     fn ip_binding_rejects_hostnames_and_urls() {
         assert_eq!(address("127.0.0.1", DEFOLD_PORT).unwrap().port(), DEFOLD_PORT);
         assert!(address("192.168.0.2:17654", DEFOLD_PORT).is_ok());
@@ -551,7 +725,9 @@ mod tests {
         assert!(same_project("/project/a/", "/project/a"));
         assert!(!same_project("", ""));
         assert!(!same_project("/project/a", "/project/b"));
-        if cfg!(windows) { assert!(same_project("X:\\Projs\\Game", "x:/projs/game/")); }
+        if cfg!(windows) {
+            assert!(same_project("X:\\Projs\\Game", "x:/projs/game/"));
+        }
     }
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
@@ -559,7 +735,13 @@ mod tests {
         let root = tempfile::tempdir().unwrap();
         std::fs::write(root.path().join("game.project"), "project").unwrap();
         std::fs::write(root.path().join("work.gui.pcraft"), "unsaved design source").unwrap();
-        let mut peer = Peer { id: "editor".into(), address: "127.0.0.1:1".into(), token: "ticket".into(), project: root.path().to_string_lossy().into_owned(), root: String::new() };
+        let mut peer = Peer {
+            id: "editor".into(),
+            address: "127.0.0.1:1".into(),
+            token: "ticket".into(),
+            project: root.path().to_string_lossy().into_owned(),
+            root: String::new(),
+        };
         native::mirror(&mut peer).unwrap(); // Port 1 is deliberately unreachable: no network is needed.
         assert!(same_project(&peer.root, &peer.project));
         assert_eq!(std::fs::read_to_string(root.path().join("work.gui.pcraft")).unwrap(), "unsaved design source");
