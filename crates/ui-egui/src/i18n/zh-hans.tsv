@@ -2976,100 +2976,100 @@ curves	Smooth	平滑
 	Reconnecting to	正在重新连接
 	Creative source save cancelled	已取消保存创作源
 	Creative source saved to project	创作源已保存到工程
-Published; Defold has newer unsaved changes	已发布；Defold 中有更新的未保存修改
-GUI and artwork published to Defold	GUI 和图像已发布到 Defold
-Publication stopped; creative source is preserved	发布已停止；创作源已保留
-Publication needs recovery; check its status before retrying	发布需要恢复；请先查询状态再重试
-Publication is awaiting confirmation; check its status	发布正在等待确认；请查询状态
-No publication has been recorded for this GUI	此 GUI 尚无发布记录
-Publication was not confirmed	发布尚未确认
-Publication cancelled; check its status before retrying	发布已取消；请先查询状态再重试
-Publishing GUI and artwork...	正在发布 GUI 和图像…
-Creative source	创作源
-Source has unsaved edits	创作源有未保存的修改
-Creative source has not been saved to project	创作源尚未保存到工程
-Save creative source	保存创作源
-Saving creative source...	正在保存创作源…
-Saves the creative source, then publishes GUI and artwork	先保存创作源，再发布 GUI 和图像
-New edits have not been published	新修改尚未发布
-Publication details	发布详情
-Check publication status	查询发布状态
-Project connection	工程连接
-Connect project host...	连接工程主机…
-Choose a project pairing file on this computer	选择此电脑上的工程配对文件
-Project host connected	工程主机已连接
-Open project GUI	打开工程 GUI
-Defold editor connection	Defold 编辑器连接
-Release editing permission	释放编辑权限
-Save the creative source before handing editing to another computer	交接给另一台电脑前，请先保存创作源
-Cancel prepared publication	取消待发布事务
-Reviewed changes applied; save or sync when ready	已应用复核结果，可继续保存或同步
-Review cancelled; the creative source is unchanged	已取消复核，创作源保持不变
-Checking project changes...	正在检查工程修改…
-Review Defold changes	复核 Defold 修改
-Compare both editors before accepting independent property changes	对照两边的修改，再接纳独立的属性变化
-Check project changes	检查工程修改
-Save this GUI in Defold, then check changes again	请先在 Defold 保存此 GUI，再重新检查修改
-The draft changed; check project changes again	草稿已变化，请重新检查工程修改
-Common version	共同版本
-Absent	不存在
-Keep Craft	保留 Craft 修改
-Use Defold	采用 Defold 修改
-Painted artwork is preserved	保留已绘制内容
-No project differences	两边没有差异
-Apply reviewed changes	应用复核结果
-PhotoCraft	PhotoCraft
-Defold	Defold
-Migration saved. Preserve this draft separately, then reopen the GUI to use the migrated source	迁移已保存。请另存当前草稿，再重新打开 GUI 使用迁移后的源文件
-Migration needs review; original files are preserved	迁移需要复核；原文件已保留
-Project asset inventory updated	项目资产清单已更新
-Asset inspection cancelled	已取消资产检查
-Reading project asset inventory...	正在读取项目资产清单…
-Project assets and legacy sources	项目资产与旧版源文件
-Refresh asset inventory	刷新资产清单
-References are incomplete; retained resources will not be deleted	引用信息不完整；保留资源不会被删除
-Active resource	在用资源
-Retained resource	保留资源
-Legacy source review	旧版源文件复核
-Migration backs up the selected source and leaves this open draft unchanged	迁移会备份所选源文件，当前打开的草稿保持不变
-Back up and migrate selected source	备份并迁移所选源文件
-Check migration status	检查迁移状态
-Request editing permission	申请编辑权限
-Editing permission acquired; saving still checks the project version	已取得编辑权限；保存时仍会检查项目版本
-Editing permission released	编辑权限已释放
-Updating editing permission...	正在更新编辑权限…
-Reveal in Defold	在 Defold 中打开资源
-Resource opened in Defold	已在 Defold 中打开资源
-Saved creative source	已保存的创作源
-Published version	已发布版本
-Used by another scene	被其他界面引用
-Editor history	编辑器历史记录
-Unsaved editor changes	编辑器未保存的修改
-Public game resource	游戏公共资源
-Incomplete reference inventory	引用清单不完整
-Changed outside PhotoCraft	已在 PhotoCraft 外部修改
-Deletion has not been requested	尚未申请删除
-Recovery period	恢复保留期
-Verified backup required	需要已校验的备份
-Pending publication	待完成的发布
-Shared artwork	共享素材
-The owner keeps the editable layers; other GUIs use a read-only reference	源文件保留可编辑图层，其他 GUI 使用只读引用
-Edit the owner or make this node independent before painting	绘画前请打开共享源，或将此节点转为独立素材
-Open artwork source	打开素材源文件
-Make artwork independent	转为独立素材
-Copy shared artwork ID	复制共享素材 ID
-Paste a shared artwork ID	粘贴共享素材 ID
-Use shared artwork for this node	此节点使用共享素材
-Shared artwork ID copied	已复制共享素材 ID
-Shared artwork attached; save and publish to update the game	已链接共享素材，保存并同步后更新游戏资源
-Artwork is independent and editable; the shared owner is unchanged	素材已独立，可以编辑；共享源保持不变
-Shared artwork source opened	已打开共享素材源文件
-Review shared publication	检查关联 GUI 发布范围
-Shared publication scope checked	已检查关联 GUI 发布范围
-The document changed; review the publication scope again	文档已修改，请重新检查发布范围
-Saved related changes have not been published	关联 GUI 有已保存但未发布的修改
-Publishing will include the saved changes in these related GUIs	此次发布将包含以下关联 GUI 中已保存的修改
-Publish these saved related changes	一并发布这些已保存的关联修改
+	Published; Defold has newer unsaved changes	已发布；Defold 中有更新的未保存修改
+	GUI and artwork published to Defold	GUI 和图像已发布到 Defold
+	Publication stopped; creative source is preserved	发布已停止；创作源已保留
+	Publication needs recovery; check its status before retrying	发布需要恢复；请先查询状态再重试
+	Publication is awaiting confirmation; check its status	发布正在等待确认；请查询状态
+	No publication has been recorded for this GUI	此 GUI 尚无发布记录
+	Publication was not confirmed	发布尚未确认
+	Publication cancelled; check its status before retrying	发布已取消；请先查询状态再重试
+	Publishing GUI and artwork...	正在发布 GUI 和图像…
+	Creative source	创作源
+	Source has unsaved edits	创作源有未保存的修改
+	Creative source has not been saved to project	创作源尚未保存到工程
+	Save creative source	保存创作源
+	Saving creative source...	正在保存创作源…
+	Saves the creative source, then publishes GUI and artwork	先保存创作源，再发布 GUI 和图像
+	New edits have not been published	新修改尚未发布
+	Publication details	发布详情
+	Check publication status	查询发布状态
+	Project connection	工程连接
+	Connect project host...	连接工程主机…
+	Choose a project pairing file on this computer	选择此电脑上的工程配对文件
+	Project host connected	工程主机已连接
+	Open project GUI	打开工程 GUI
+	Defold editor connection	Defold 编辑器连接
+	Release editing permission	释放编辑权限
+	Save the creative source before handing editing to another computer	交接给另一台电脑前，请先保存创作源
+	Cancel prepared publication	取消待发布事务
+	Reviewed changes applied; save or sync when ready	已应用复核结果，可继续保存或同步
+	Review cancelled; the creative source is unchanged	已取消复核，创作源保持不变
+	Checking project changes...	正在检查工程修改…
+	Review Defold changes	复核 Defold 修改
+	Compare both editors before accepting independent property changes	对照两边的修改，再接纳独立的属性变化
+	Check project changes	检查工程修改
+	Save this GUI in Defold, then check changes again	请先在 Defold 保存此 GUI，再重新检查修改
+	The draft changed; check project changes again	草稿已变化，请重新检查工程修改
+	Common version	共同版本
+	Absent	不存在
+	Keep Craft	保留 Craft 修改
+	Use Defold	采用 Defold 修改
+	Painted artwork is preserved	保留已绘制内容
+	No project differences	两边没有差异
+	Apply reviewed changes	应用复核结果
+	PhotoCraft	PhotoCraft
+	Defold	Defold
+	Migration saved. Preserve this draft separately, then reopen the GUI to use the migrated source	迁移已保存。请另存当前草稿，再重新打开 GUI 使用迁移后的源文件
+	Migration needs review; original files are preserved	迁移需要复核；原文件已保留
+	Project asset inventory updated	项目资产清单已更新
+	Asset inspection cancelled	已取消资产检查
+	Reading project asset inventory...	正在读取项目资产清单…
+	Project assets and legacy sources	项目资产与旧版源文件
+	Refresh asset inventory	刷新资产清单
+	References are incomplete; retained resources will not be deleted	引用信息不完整；保留资源不会被删除
+	Active resource	在用资源
+	Retained resource	保留资源
+	Legacy source review	旧版源文件复核
+	Migration backs up the selected source and leaves this open draft unchanged	迁移会备份所选源文件，当前打开的草稿保持不变
+	Back up and migrate selected source	备份并迁移所选源文件
+	Check migration status	检查迁移状态
+	Request editing permission	申请编辑权限
+	Editing permission acquired; saving still checks the project version	已取得编辑权限；保存时仍会检查项目版本
+	Editing permission released	编辑权限已释放
+	Updating editing permission...	正在更新编辑权限…
+	Reveal in Defold	在 Defold 中打开资源
+	Resource opened in Defold	已在 Defold 中打开资源
+	Saved creative source	已保存的创作源
+	Published version	已发布版本
+	Used by another scene	被其他界面引用
+	Editor history	编辑器历史记录
+	Unsaved editor changes	编辑器未保存的修改
+	Public game resource	游戏公共资源
+	Incomplete reference inventory	引用清单不完整
+	Changed outside PhotoCraft	已在 PhotoCraft 外部修改
+	Deletion has not been requested	尚未申请删除
+	Recovery period	恢复保留期
+	Verified backup required	需要已校验的备份
+	Pending publication	待完成的发布
+	Shared artwork	共享素材
+	The owner keeps the editable layers; other GUIs use a read-only reference	源文件保留可编辑图层，其他 GUI 使用只读引用
+	Edit the owner or make this node independent before painting	绘画前请打开共享源，或将此节点转为独立素材
+	Open artwork source	打开素材源文件
+	Make artwork independent	转为独立素材
+	Copy shared artwork ID	复制共享素材 ID
+	Paste a shared artwork ID	粘贴共享素材 ID
+	Use shared artwork for this node	此节点使用共享素材
+	Shared artwork ID copied	已复制共享素材 ID
+	Shared artwork attached; save and publish to update the game	已链接共享素材，保存并同步后更新游戏资源
+	Artwork is independent and editable; the shared owner is unchanged	素材已独立，可以编辑；共享源保持不变
+	Shared artwork source opened	已打开共享素材源文件
+	Review shared publication	检查关联 GUI 发布范围
+	Shared publication scope checked	已检查关联 GUI 发布范围
+	The document changed; review the publication scope again	文档已修改，请重新检查发布范围
+	Saved related changes have not been published	关联 GUI 有已保存但未发布的修改
+	Publishing will include the saved changes in these related GUIs	此次发布将包含以下关联 GUI 中已保存的修改
+	Publish these saved related changes	一并发布这些已保存的关联修改
 	Accept and Go to Conflict	接受并转到冲突
 	Changes undone.	已撤消更改。
 	Choose a new shortcut for this command, or leave it without one.	为此命令选择新的快捷键，或保留为无快捷键。

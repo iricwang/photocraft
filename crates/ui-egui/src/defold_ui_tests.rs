@@ -72,7 +72,11 @@ fn gui_ai_adapter_uses_existing_service_and_keeps_focus_draft_and_references() {
     let doc = &app.session.active().unwrap().doc;
     let result = doc.ai_generations[0].versions[0].layer.unwrap();
     assert_eq!(photocraft_engine::defold_design::node_for_layer(doc, result).unwrap().node, "button");
-    assert_eq!(app.run("defold.syncDesign", json!({})).unwrap()["assets"], 1);
+    let pending = app.run("defold.syncDesign", json!({})).unwrap();
+    let job = photocraft_engine::jobs::JobId(pending["job"].as_u64().unwrap());
+    let published = app.session.wait_job(job).unwrap();
+    assert_eq!(published["synced"], true);
+    assert!(dir.path().join("photocraft_generated").is_dir());
     app.session.set_active(0);
     crate::ai_project::sync_prompt(&mut app);
     assert_eq!(app.ui.ai.prompt, "Image draft");

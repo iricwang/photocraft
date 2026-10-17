@@ -727,6 +727,13 @@ pub fn sync_panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
         ui.label(tl!("Open a linked Defold GUI to synchronize"));
         return;
     };
+    let busy = app.session.active_job().is_some() || photocraft_engine::defold_project_client::project_task_running(&app.session);
+    let width = ui.available_width();
+    if ui.add_enabled_ui(!busy && app.session.is_enabled("defold.syncDesign"), |ui| widgets::primary_button(ui, tl!("Sync to Defold"), width)).inner.clicked() {
+        run_publication(app, ui, open_id, "defold.syncDesign");
+    }
+    ui.add(egui::Label::new(tl!("Saves the creative source, then publishes GUI and artwork")).wrap());
+    ui.separator();
     let source = photocraft_engine::defold_project_client::status(&app.session);
     ui.strong(tl!("Creative source"));
     ui.label(if source["sourceKnownSaved"] != true {
@@ -736,7 +743,6 @@ pub fn sync_panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     } else {
         tl!("Creative source saved to project")
     });
-    let busy = app.session.active_job().is_some() || photocraft_engine::defold_project_client::project_task_running(&app.session);
     if ui.add_enabled(!busy && app.session.is_enabled("defold.saveDesignSource"), egui::Button::new(tl!("Save creative source"))).clicked()
         && let Ok(result) = app.run("defold.saveDesignSource", json!({}))
     {
@@ -759,11 +765,6 @@ pub fn sync_panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     }
     ui.add_space(8.0);
     ui.separator();
-    let width = ui.available_width();
-    if ui.add_enabled_ui(!busy && app.session.is_enabled("defold.syncDesign"), |ui| widgets::primary_button(ui, tl!("Sync to Defold"), width)).inner.clicked() {
-        run_publication(app, ui, open_id, "defold.syncDesign");
-    }
-    ui.add(egui::Label::new(tl!("Saves the creative source, then publishes GUI and artwork")).wrap());
     if let Some(status) = ui.ctx().data(|data| data.get_temp::<PublicationStatus>(status_id(open_id))) {
         let text = egui::RichText::new(&status.message);
         ui.add(egui::Label::new(if status.error { text.color(ui.visuals().error_fg_color) } else { text }).wrap());

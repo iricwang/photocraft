@@ -1,6 +1,6 @@
 {
   "channel": "ai-p0",
-  "notes": "Support multiple Defold project connections and multiple PhotoCraft clients with independent sessions and safe project routing",
-  "revision": 4,
+  "notes": "Many-to-many Defold bindings with scoped sessions, native connection selection, compact sync controls and verified release regressions",
+  "revision": 5,
   "schema": 1
 }
