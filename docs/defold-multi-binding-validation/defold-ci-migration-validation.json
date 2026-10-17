@@ -1,0 +1,13 @@
+{
+  "version": "1.14.1-patch.31",
+  "commit": "0a0e80f8df2c0c692978c72fe04e3a30ef80c663",
+  "baseline_revision": 22,
+  "feed": "published GitHub compatibility manifest-arm64-macos-local22.json",
+  "download_install_restart": "passed",
+  "verified_files": 168,
+  "mismatches": [],
+  "normal_feed_restored": "https://github.com/iricwang/defold/releases/download/patch-dev/manifest.json",
+  "target_inventory": "exactly equals standard CI patch.31 inventory",
+  "patch_sha256": "24ce532031a7f6acca9282948c7dd94626f19bd712f27bb21a58756c17fe4f39",
+  "qa_instrumentation": "Production migration helper with only nREPL/plorer launcher arguments added"
+}

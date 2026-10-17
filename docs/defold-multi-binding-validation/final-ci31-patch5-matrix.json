@@ -1,0 +1,104 @@
+{
+  "craft": {
+    "5a": {
+      "bindingVersion": 2,
+      "connected": true,
+      "error": null,
+      "id": "9dc2d48de83768856750f816ebf149aa450e1a4a91b8ab1060d5fc8458dd36e4",
+      "outgoing": null,
+      "peer": {
+        "address": "127.0.0.1:18751",
+        "id": "dc94acd7a2d8312cad559f22f55b3e98580e78c93bf5ce7a76137587ec4fccbd",
+        "project": "${DEFOLD_REPO}/tmp/craft-multi/project-b",
+        "root": "${DEFOLD_REPO}/tmp/craft-multi/project-b"
+      },
+      "peers": [
+        {
+          "connected": true,
+          "peer": {
+            "address": "127.0.0.1:18750",
+            "id": "cbbf2673102349974e0a9991e50e334cad9ad05fc2d00e2d5f08f5cd2e7045b4",
+            "project": "${DEFOLD_REPO}/tmp/craft-multi/project-a",
+            "root": "${DEFOLD_REPO}/tmp/craft-multi/project-a"
+          }
+        },
+        {
+          "connected": true,
+          "peer": {
+            "address": "127.0.0.1:18751",
+            "id": "dc94acd7a2d8312cad559f22f55b3e98580e78c93bf5ce7a76137587ec4fccbd",
+            "project": "${DEFOLD_REPO}/tmp/craft-multi/project-b",
+            "root": "${DEFOLD_REPO}/tmp/craft-multi/project-b"
+          }
+        }
+      ],
+      "pending": null,
+      "port": 19157,
+      "working": false
+    },
+    "5b": {
+      "bindingVersion": 2,
+      "connected": true,
+      "error": null,
+      "id": "91683b0f11fc41fb2db8698a8b95bb747032b7212d3da92d1e0740e0088c1964",
+      "outgoing": null,
+      "peer": {
+        "address": "127.0.0.1:18751",
+        "id": "dc94acd7a2d8312cad559f22f55b3e98580e78c93bf5ce7a76137587ec4fccbd",
+        "project": "${DEFOLD_REPO}/tmp/craft-multi/project-b",
+        "root": "${DEFOLD_REPO}/tmp/craft-multi/project-b"
+      },
+      "peers": [
+        {
+          "connected": true,
+          "peer": {
+            "address": "127.0.0.1:18750",
+            "id": "cbbf2673102349974e0a9991e50e334cad9ad05fc2d00e2d5f08f5cd2e7045b4",
+            "project": "${DEFOLD_REPO}/tmp/craft-multi/project-a",
+            "root": "${DEFOLD_REPO}/tmp/craft-multi/project-a"
+          }
+        },
+        {
+          "connected": true,
+          "peer": {
+            "address": "127.0.0.1:18751",
+            "id": "dc94acd7a2d8312cad559f22f55b3e98580e78c93bf5ce7a76137587ec4fccbd",
+            "project": "${DEFOLD_REPO}/tmp/craft-multi/project-b",
+            "root": "${DEFOLD_REPO}/tmp/craft-multi/project-b"
+          }
+        }
+      ],
+      "pending": null,
+      "port": 19158,
+      "working": false
+    }
+  },
+  "defold": {
+    "a": {
+      "app": "Defold",
+      "id": "cbbf2673102349974e0a9991e50e334cad9ad05fc2d00e2d5f08f5cd2e7045b4",
+      "bindingVersion": 2,
+      "bound": "9dc2d48de83768856750f816ebf149aa450e1a4a91b8ab1060d5fc8458dd36e4",
+      "boundPeers": [
+        "91683b0f11fc41fb2db8698a8b95bb747032b7212d3da92d1e0740e0088c1964",
+        "9dc2d48de83768856750f816ebf149aa450e1a4a91b8ab1060d5fc8458dd36e4"
+      ]
+    },
+    "b": {
+      "app": "Defold",
+      "id": "dc94acd7a2d8312cad559f22f55b3e98580e78c93bf5ce7a76137587ec4fccbd",
+      "bindingVersion": 2,
+      "bound": "9dc2d48de83768856750f816ebf149aa450e1a4a91b8ab1060d5fc8458dd36e4",
+      "boundPeers": [
+        "91683b0f11fc41fb2db8698a8b95bb747032b7212d3da92d1e0740e0088c1964",
+        "9dc2d48de83768856750f816ebf149aa450e1a4a91b8ab1060d5fc8458dd36e4"
+      ]
+    }
+  },
+  "versions": {
+    "defold": "patch.31",
+    "craft": "patch.5",
+    "defold_source": "0a0e80f8df2c0c692978c72fe04e3a30ef80c663",
+    "craft_source": "744d4f340e15ba719ba86fb45efc41b0bbb14759"
+  }
+}

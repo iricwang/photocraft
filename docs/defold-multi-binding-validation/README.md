@@ -18,3 +18,5 @@ Final tests: engine/integration 2140 passed / 23 ignored; final UI 3084 passed /
 - `craft-update5-local.json`, `craft-update5-github.json`: exact baseline update evidence
 
 `${DEFOLD_REPO}` denotes the sibling checkout. Only sanitized session identifiers are recorded, never credentials. LAN behavior was not manually exercised. Sessions reconnect while a Craft remains running; after both applications exit, non-default addresses must be added again.
+
+Final follow-up: all Defold patch.31 platform and publisher jobs succeeded. The exact local Defold22→CI31 migration passed published-GitHub download, installation, restart and all 168 file hashes/modes. Two final CI31 native editors then automatically reconnected to both released Craft5 instances with exactly four edges and fresh editor IDs; the native target selector displayed both Craft addresses without source hot loading. See `final-ci31-patch5-matrix.json`, `ci31-status.json`, `defold-ci-migration-validation.json` and [CI selector](14-final-ci31-target-selection.png).

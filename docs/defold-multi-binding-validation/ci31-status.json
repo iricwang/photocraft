@@ -1,0 +1,37 @@
+{
+  "url": "https://github.com/iricwang/defold/actions/runs/39034936608",
+  "source": "0a0e80f8df2c0c692978c72fe04e3a30ef80c663",
+  "status": "completed",
+  "conclusion": "success",
+  "jobs": [
+    {
+      "name": "Patch (x86_64-macos)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-10-17T13:02:41Z",
+      "completedAt": "2026-10-17T13:46:26Z"
+    },
+    {
+      "name": "Patch (x86_64-win32)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-10-17T13:02:36Z",
+      "completedAt": "2026-10-17T13:06:41Z"
+    },
+    {
+      "name": "Patch (arm64-macos)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-10-17T13:02:42Z",
+      "completedAt": "2026-10-17T13:22:01Z"
+    },
+    {
+      "name": "Publish branch patch",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-10-17T13:46:29Z",
+      "completedAt": "2026-10-17T13:47:25Z"
+    }
+  ],
+  "release": "https://github.com/iricwang/defold/releases/tag/patch-dev-31"
+}
